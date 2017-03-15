@@ -1,0 +1,28 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$component-type: transform
+properties:
+  version:
+    type: string
+  name:
+    type: string
+    default: "Generic Transform"
+  poll_rate:
+    type: number
+    default: 30
+  records_per_file:
+    type: number
+    default: 750
+  polltime:
+    description: Poll time in seconds
+    type: number
+    minimum: 1
+    default: 5
+  actions:
+    type: array
+    items:
+      type: object
+
+required:
+- version
+- actions

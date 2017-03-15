@@ -1,0 +1,180 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.1.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  host:
+    description: The IP address of the server you are collecting data from
+    type: string
+    pattern: ^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$
+  docker:
+    type: boolean
+    default: False
+  codes:
+    description: define whether a column should be set to 0/1 if it exists or meets the conditional.
+    type: array
+    items:
+        type: object
+        properties:
+          column:
+            description: name of the column to perform the conditional check on
+            type: string
+          code:
+            description: dictionary code key value to set
+            type: string
+          conditional:
+            description: conditional expression used in simple_eval.  String should be formatted with {0} as the value
+              and any condition value field.  Example> {0} == 1.  If expression evaluates to 0/False the value set is 0.
+              Any other values are considered 1/True and the value is set to 1.
+            type: string
+        required:
+          - column
+          - code
+  db_url:
+    description: Send use a complete DB connection URL instead of separate user/pass/type/host/port params 
+    type: string
+  db_type:
+    type: string
+  db_user:
+    type: string
+  db_pass:
+    type: string
+  file_mode:
+    description: The database you're connecting to is a file, not a network service 
+    type: boolean
+    default: False
+  port:
+    description: The port of the server you are collection data from
+    type: integer
+    minimum: 0
+    maximum: 65535
+    default: 5432
+  ssl:
+    description: whether the encryption is enabled
+    type: boolean
+    default: True
+  db_name:
+    type: string
+  poll_rate:
+    type: number
+    minimum: 0.1
+    maximum: 65535.0
+  query:
+    description: SQL query to fetch data
+    type: string
+  filter:
+    description: filtering expression. e.g. e."TIME_S" > '2015-05-21 16:00:00'
+    type: string
+  order_by:
+    description: order by expression. e.g. 'e."TIME_S" ASC'
+    type: string
+  time_field_name:
+    description: datetime field name. e.g. TIME_S
+    type: string
+  id_field:
+    description: id field
+    type: string
+  outputdirectory:
+    type: string
+    default: "databuffer/default"
+    pattern: ^([A-Za-z0-9_/])+$
+  records_per_file:
+    description: how many records
+    type: number
+  cachedirectory:
+    type: string
+    default: "./"
+    pattern: ^([A-Za-z0-9_/])+$
+  cachefilename:
+    type: string
+    description: file name for SQL pointer
+  source:
+    type: string
+    description: name of source, will be used in json file name
+  timezone:
+    type: string
+    description: the pytz timezone of the source
+  limit:
+    type: integer
+    minimum: 1
+    description: limit of how many records to return at a time.
+  stored_procedure:
+    type: string
+    description: used when the sql query is calling a stored procedure, ie of the format EXECUTE <stored_proc>.
+      The string given to stored procedure is passed to the stored_proc
+    default: false
+  alias_columns:
+    type: object
+    description: used to alias columns when not possible within the query, key is name received column name, value is desired column name
+  pd_pivot:
+    type: object
+    description: uses a the pandas pivot function to pivot the data after being collected. http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.pivot.html
+    values:
+      type: string
+      description: column name with values in it
+    index:
+      type: string
+      description: column name you wish to use as the index
+    columns:
+      type: string
+      description: The column name you wish to derive your new columns from.
+    fill_forward:
+      type: boolean
+      description: fill in null values using the data behind the null in the column. http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.fillna.html using 'ffill'
+  replace_fieldname_characters:
+    type: array
+    description: list of dictionaries of characters to replace in the fieldnames to replace. key is char(s) to be replaced, value is the char(s) to be replaced with
+  drop_null_values:
+    type: boolean
+    default: False
+    description: before sending an sslog all values that are null/None are dropped.
+  time_based_truncate:
+    type: boolean
+    default: False
+    description: prevents paging from lopping off rows for a timestamp. You should probably read the code for this if you want to use it.
+  signed_int_overflow_fix:
+    type: object
+    description: In the event a value is overflowing this will correct the negative number to there proper positive numbers.
+    byte_size:
+      type: integer
+      description: how many bits are in the byte
+    datafield:
+      type: string
+      description: The name of the datafield that will show in the sslog.
+  linear_interpolation:
+    type: object
+    description: interpolates y values and countis off values between x values.
+    x_fieldname:
+      type: string
+      description: Name of the field that will show in the sslog that will be used for the x value
+    y_fieldname:
+      type: string
+      description: Name of the field that will show in the sslog that will be used for the y value
+    x_max_diff:
+      type: integer
+      description: Maximum difference between x values to count off for.
+    y_max_diff:
+      type: integer
+      description: Maximum difference between y values to interpolate for.
+    x_max:
+      type: integer
+      description: Used in the scenario where x will reset back to zero. This is the maximum value x could ever be.
+  counter_field:
+    type: string
+    description: The name of the field that will show in the sslogs that will be set as the counter.
+  counter_round_down:
+    type: integer
+    description: number to round the counter down to
+  sticky_counter:
+    type: boolean
+    description: uses the counter from the last record if record not present.
+    default: False
+required:
+- version
+- poll_rate
+- query
+- time_field_name
+- id_field
+- records_per_file
+- cachefilename

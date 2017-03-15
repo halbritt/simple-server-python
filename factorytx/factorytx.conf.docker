@@ -1,0 +1,64 @@
+# File which must be locked exclusively before factorytx runs.
+lockfile: "/tmp/FactoryTx.lock"
+
+plugins:
+  conf.d: "/opt/sightmachine/FactoryTx/FactoryTx/pipelines/conf.d/"
+  data: "/var/spool/sightmachine/FactoryTx/"
+
+########
+# To Enable Logging on start you will need to add the following to your rsyslog config at:
+# /etc/rsyslog.d/
+#
+# File name: 40-factorytx.conf
+# $ModLoad imudp
+# $UDPServerRun 514
+#
+# $MaxMessageSize 64k
+# $EscapeControlCharactersOnReceive off
+# $RepeatedMsgContainsOriginalMsg on
+#
+# $template factorytxlog,"/var/log/factorytx/%app-name%.log"
+#
+# if ($app-name startswith 'factorytx') then ?factorytxlog
+# & ~
+########
+logging:
+  version: 1
+  disable_existing_loggers: false
+
+  formatters:
+    console:
+      format: '%(asctime)s %(name)-12s %(process)d %(levelname)s - %(message)s'
+      datefmt: '%Y-%m-%d %H:%M'
+    syslog:
+      (): rfc5424syslog.RFC5424Formatter
+      format: '1 %(isotime)s %(hostname)s factorytx - - %(name)s %(levelname)s %(message)s'
+
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: console
+      stream: ext://sys.stderr
+    syslog:
+      class: logging.handlers.SysLogHandler
+      formatter: syslog
+
+  loggers:
+    suds:
+      level: INFO  # debug-level logging breaks suds, see SD-157.
+
+  root:
+    level: DEBUG
+    handlers: syslog
+    handlers: [console, syslog]
+
+
+###
+# Only add the following lines to a config file specified outside of git
+# ex: /etc/sightmachine/factorytx/factorytx.conf
+###
+#s3:
+#  aws_access_key: "<AWS_ACCESS_KEY>"
+#  aws_secret_access_key: "<AWS_SECRET_ACCESS_KEY>"
+#  aws_bucket: "<AWS_BUCKET>" # bucket name ex: sm-factorytx-bucket
+#  aws_path_prefix: "<AWS_PATH_PREFIX>" # full path to config files ex: config/dcn/CLIENT

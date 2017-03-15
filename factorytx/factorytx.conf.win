@@ -1,0 +1,18 @@
+# File which must be locked exclusively before factorytx runs.
+lockfile: "\\factorytx.lock"
+
+plugins:
+  conf.d: "plugins\\conf.d\\"
+  data: "spool\\"
+
+log_folder: "logs\\"
+
+###
+# Only add the following lines to a config file specified outside of git
+# ex: /etc/sightmachine/factorytx/factorytx.conf
+###
+#s3:
+#  aws_access_key: "<AWS_ACCESS_KEY>"
+#  aws_secret_access_key: "<AWS_SECRET_ACCESS_KEY>"
+#  aws_bucket: "<AWS_BUCKET>" # bucket name ex: sm-factorytx-bucket
+#  aws_path_prefix: "<AWS_PATH_PREFIX>" # full path to config files ex: config/dcn/CLIENT

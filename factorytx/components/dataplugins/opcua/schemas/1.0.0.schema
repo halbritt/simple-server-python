@@ -1,0 +1,72 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  host:
+    description: The IP address of the server you are collecting data from
+    type: string
+    pattern: ^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$
+  port:
+    description: OPCUA port.  Ignition defaults to 4096.  OPCUA samples/servers default to 49320
+    type: integer
+    minimum: 1
+    maximum: 65535
+    default: 49320
+  username:
+    description: Ignition OPCUA username
+    type: string
+  password:
+    description: Ignition OPCUA password
+    type: string
+  security_settings:
+    description: this is the OPCUA set_security_string value.
+    type: string
+    default: "Basic128Rsa15,SignAndEncrypt,/opt/sightmachine/keys/public.pem,/opt/sightmachine/keys/private.pem"
+  node_server_idx:
+    description: this is the OPCUA server index used with tags names "ns=node_server_idx;s=tag_name"
+    type: integer
+    default: 1
+  timeout:
+    description: client connection timeout in ms
+    type: integer
+    minimum: 100
+    maximum: 999999999
+    default: 600
+  poll_rate:
+    type: number
+    minimum: 0.1
+    maximum: 65535.0
+  counter_rate:
+    description: time in seconds between cycle counter increments
+    type: integer
+    min: 1
+    max: 2147483647
+  multi_source:
+    description: "duplicate sslogs with the source names in this array"
+    type: array
+    minItems: 1
+  name_space:
+    description: provide a name space for the get_node() function, uses get child() function without this.
+    type: integer
+  default_loglevel:
+    type: integer
+    default: 30
+  tags:
+    type: array
+    items:
+      type: object
+    minItems: 1
+    uniqueItems: true
+    default: []
+  outputdirectory:
+    type: string
+    default: "databuffer/default"
+    pattern: ^([A-Za-z0-9_/])+$
+required:
+- version
+- host
+- port
+- poll_rate
+- tags

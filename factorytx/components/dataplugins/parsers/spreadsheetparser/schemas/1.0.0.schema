@@ -1,0 +1,86 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  sslog_folder:
+    description: Folder where we will save parsed files
+    type: string
+  sheet_type:
+    type: string
+    default: csv
+  codes:
+    description: define whether a column should be set to 0/1 if it exists or meets the conditional.
+    type: array
+    default: []
+    items:
+        type: object
+        properties:
+          column:
+            description: name of the column to perform the conditional check on
+            type: string
+          code:
+            description: dictionary code key value to set
+            type: string
+          conditional:
+            description: conditional expression used in simple_eval.  String should be formatted with {0} as the value
+              and any condition value field.  Example> {0} == 1.  If expression evaluates to 0/False the value set is 0.
+              Any other values are considered 1/True and the value is set to 1.
+            type: string
+        required:
+          - column
+          - code
+  parse_options:
+    type: array
+    items:
+      type: object
+      properties:
+        report_pattern:
+          description: used to determine whether to parse a file with these options.  Example> 'test*.csv'
+          type: string
+        localtz:
+          description: localization string, used to convert datetime to local. Example> 'Asia/Ho_Chi_Minh'
+          type: string
+        load:
+          parse:
+            parse_dates:
+              description: list of columns which will be converted to a datetime
+              type: array
+              items:
+                type: string
+          counter:
+            description: whether to include the 'counter' column
+            type: boolean
+          actions:
+            description: execute a Panda DataFrame method based on its name and parameters. Ex> 'set_index' colon ['Start Time']
+            type: array
+            items:
+              type: object
+          regex:
+            description: convert a columns value from a source column to a target column, see re.sub(pattern,repl,string)
+            type: array
+            items:
+              type: object
+              properties:
+                source:
+                  description: source column name
+                  type: string
+                target:
+                  description: destination column name
+                  type: string
+                pattern:
+                  description: find this pattern using regex string sequence
+                  type: string
+                repl:
+                  description: this is the replacement value, '\\1' or group 1
+                  type: string
+              required:
+                - source
+                - target
+                - pattern
+      required:
+        - report_pattern
+required:
+- version
+- parse_options

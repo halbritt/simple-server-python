@@ -1,0 +1,15 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  outputdirectory:
+    type: string
+    default: '/var/spool/sightmachine/factorytx/completed/'
+  poll_rate:
+    type: integer
+    minimum: 0.1
+    default: 2
+required:
+- version

@@ -1,0 +1,31 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  host:
+    description: The http(s) endpoint of the server you are collecting data from
+    type: string
+  poll_rate:
+    type: number
+    minimum: 0.1
+    maximum: 65535.0
+  outputdirectory:
+    type: string
+    default: "databuffer/default"
+    pattern: ^([A-Za-z0-9_/])+$
+  records_per_file:
+    type: number
+    description: number of records to combine into a single sslog json
+  poll_rate:
+    type: number
+    minimum: 0.1
+    maximum: 65535.0
+  verifySSL:
+    type: boolean
+    default: true
+required:
+- version
+- host
+- poll_rate

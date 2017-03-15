@@ -1,0 +1,323 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  version:
+    type: string
+  host:
+    description: The IP address of the server you are collecting data from
+    type: string
+    pattern: ^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$
+  port:
+    description: The port of the server you are collecting data from
+    type: integer
+    minimum: 0
+    maximum: 65535
+  databufferlength:
+    description: DEPRECATED
+    type: integer
+    minimum: 0
+    default: 1024
+  polltime:
+    description: The time in seconds to poll the PLC
+    type: number
+    minimum: 0
+    default: 0.25
+  aggregationtime:
+    description: Time in seconds to collect data before emitting JSON files.
+    type: number
+    minimum: 0
+    default: 10
+  debug:
+    description: Enable debug mode
+    type: boolean
+    default: false
+  storage:
+    description: DEPRECATED
+    type: string
+    default: JSON
+  split_data:
+    type: boolean
+    default: false
+    description: Split json data in to files (left / right) or not. DEPRECATED.
+  split_prefixs:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 2
+    maxItems: 2
+    description: List of split prefixs (e.g. 'Left', 'Right'.) DEPRECATED.
+  split_label_suffixes:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 2
+    maxItems: 2
+    description: "List of suffixes that will be added to source in json file name (e.g. 'L', 'R'.)
+      DEPRECATED."
+  counterfield:
+    type: object
+    properties:
+      field:
+        type: string
+    required:
+      - field
+  counterfield_left:
+    type: object
+    description: DEPRECATED
+    properties:
+      field:
+        type: string
+    required:
+      - field
+    default: {}
+  counterfield_right:
+    type: object
+    description: DEPRECATED
+    properties:
+      field:
+        type: string
+    required:
+      - field
+    default: {}
+  compute_fields:
+    type: array
+    description: "Computes new field values from collected data. Computed values
+    may be written to new fields, or may overwrite existing fields. For example,
+    the following configuration rescales a value in cm to mm:
+
+    compute_fields:
+    - name: RodDiameter
+      expression: RodDiameter * 10
+      units: mm
+
+    Computed values are generated before any other processing occurs, so they
+    can be used as counter values, ex.
+
+    counterfield: {field: TotalOKCount}
+    compute_fields:
+    - name: TotalOKCount
+      expression: TotalUpperOKCount + TotalBottomOKCount
+    "
+    default: []
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: "Field name to write the expression result to. This field
+          may be new, or may already exist in the sslog."
+        expression:
+          type: string
+          description: "Python expression to compute."
+        units:
+          type: string
+          description: "Units of the output expression, ex. 'mm/s'."
+      required:
+      - name
+      - expression
+  split_sslogs:
+    type: array
+    description: "Splits an input sslog into several output sslogs for differing
+    sources. For example, given the following configuration:
+
+    - source: A
+      counterfield: A_Count
+      fieldprefixes:
+      - {prefix: A_, replace_with: ''}
+      - {prefix: a_, replace_with: z_}
+    - source: B
+      counterfield: B_Count
+      fieldprefixes:
+      - {prefix: B_, replace_with: ''}
+
+    and the input sslog
+
+    {
+        'source': 'unused',
+        'fieldvalues': {
+            'A_Count': {'value': 1},
+            'A_field': {'value': 'q'},
+            'a_field': {'value': 'r'},
+            'B_Count': {'value': 2},
+        },
+    }
+
+    split_sslog would output the following two sslogs:
+
+    [
+        {
+            'source': 'A',
+            'counter': 1,
+            'fieldvalues': {'field': {'value': 'q'}, 'z_field': {'value': 'r'}},
+        },
+        {
+            'source': 'B',
+            'counter': 2,
+            'fieldvalues': {'not_matched': {'value': 'common'},
+        },
+    ]
+
+    Additionally a source may be configured with the fieldprefix ''; this will
+    cause it to match all fields, but will still allow unmatched fields to be
+    split between all of the other sources.
+    "
+    default: []
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        source:
+          type: string
+          description: Source name for the output sslog, ex. AA_BB_Machine_1.
+        counterfield:
+          type: string
+          description: Name of the counter field for the split data source.
+        fieldprefixes:
+          type: array
+          description: "Prefixes of field names for fields to associate with this
+            data source, and instructions for how to transform them into fields
+            for the target data source."
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              prefix:
+                type: string
+                description: Field name prefix to match.
+              replace_with:
+                type: string
+                description: Replacement for the matched prefix.
+            required:
+            - prefix
+            - replace_with
+      required:
+      - source
+      - counterfield
+      - fieldprefixes
+  runningfield:
+    type: object
+    properties:
+      field:
+        anyOf:
+          - type: string
+          - type: object
+    required:
+      - field
+    default: {}
+  data_code:
+    type: string
+    default: "binary"
+    enum: ["ascii", "binary"]
+  monitlog:
+    description: DEPRECATED
+    type: string
+    default: "../logs/monitlog.log"
+  outputdirectory:
+    type: string
+    default: "databuffer/default"
+    pattern: ^([A-Za-z0-9_/])+$
+  datablocks:
+    type: array
+    items:
+      type: object
+      properties:
+        register:
+          type: string
+          enum: ["D*", "F*", "W*"]
+        baseaddress:
+          type: string
+        wordlength:
+          type: integer
+        datafields:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                type: string
+              datatype:
+                type: string
+                enum: ["bit", "char", "text", "word", "dword"]
+              name:
+                description: Name to store values as.
+                  Cannot start with '$' or contain '.' characters.
+                type: string
+                pattern: "^[^$.][^.]*$"
+              units:
+                type: string
+              bit:
+                type: integer
+                minimum: 0
+                maximum: 15
+            required:
+              - address
+              - datatype
+              - name
+              - units
+      required:
+        - register
+        - baseaddress
+        - wordlength
+        - datafields
+  collect_events:
+    type: array
+    default: []
+    items:
+      description: "Scan specified fields and return a list of the names of all
+        fields that match a specific value. The scanned fields are removed from
+        the sslog. Given the following configuration:
+
+        collect_events:
+        - output: Alarms
+          fields: [F1, F2, F3]
+          when: true
+
+        and the initial fieldvalues
+
+        {
+          'Counter': {'value': 10, 'units': 'Binary'},
+          'F1': {'value': false, 'units': 'AlarmCode'},
+          'F2': {'value': true, 'units': 'AlarmCode'},
+          'F3': {'value': false, 'units': 'AlarmCode'}
+        }
+
+        factorytx would output the following fieldvalues:
+
+        {
+          'Counter': {'value': 10, 'units': 'Binary'},
+          'Alarms': {'value': ['F2'], 'units': 'Events'}
+        }
+
+        Events are collected after sslogs are split, so you will only need one
+        set of events that will be applied to both machines. Events that only
+        apply to one machine should still be listed in the shared collect_events
+        list.
+      "
+      type: object
+      properties:
+        output:
+          type: string
+          description: "Name of the output field, ex. 'Alarms'. Should be
+            distinct from all of the input field names."
+        fields:
+          type: array
+          description: "List of field names to scan."
+          items:
+            type: string
+        when:
+          description: "Output the names of fields which match this value."
+      required:
+        - output
+        - fields
+        - when
+required:
+- version
+- host
+- port
+- counterfield
+- runningfield
+type: object # This is the type of object that should be returned when running this schema
