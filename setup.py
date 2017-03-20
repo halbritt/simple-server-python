@@ -29,7 +29,7 @@ package_data = {
 
 setup(
     name = "factorytx",
-    version = 0.0.1,
+    version = "0.1.0",
     download_url = '',
     description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
     long_description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
