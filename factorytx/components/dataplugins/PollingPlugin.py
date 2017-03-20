@@ -67,58 +67,16 @@ class PollingPlugin(DataPlugin):
         return file_entries
 
     def process_resource(self, resource, polling_service):
-        with tempfile.NamedTemporaryFile() as temp_file:
-            log.debug("Copying the file")
-            polling_service.copy_file(resource, temp_file.name)
-            log.debug("force the temporary file %s to retain the time (dont have the access_time, so both get mtime %s", temp_file.name, resource.mtime)
-            try:
-                os.utime(temp_file.name, (int(float(resource.mtime)), int(float(resource.mtime))))
-            except Exception as e:
-                log.error("The error is %s", e)
-            log.debug("Found the utime")
-            file_size = os.path.getsize(temp_file.name)
-            log.debug('Copied %s bytes from remote file "%s" to "%s".',
-                           file_size, resource.path, temp_file.name)
-            # XXX: os.path.basename may be the wrong function.
-            completed_path = os.path.join(self.completed_folder,
-                                          os.path.basename(resource.path))
-            record_sets = []  # list of iterables containing sslogs.
-            delete_file = False
-            attachment = ""
-            log.debug("The polling service datasource is %s", polling_service.name)
-            for parser_obj in self.parser_objs:
-                log.debug("The parser can handle the sources %s", parser_obj.datasources)
-                if not polling_service.name in parser_obj.datasources:
-                    log.info("This parser cant handle this resource")
-                    continue
-                # Special case for 0 byte files, we want to log, delete it and continue
-                if file_size > 0:
-                    if not parser_obj.can_parse(resource.path):
-                        continue
-                    parsed = True
-
-                    new_records = parser_obj.parse(
-                        remote_path=resource.path,    # relative path from root of polling_service
-                        local_path=temp_file.name,      # temporary filename
-                        completed_path=completed_path if os.path.exists(completed_path) else None,
-                    )
-                    self.log.info("THE NEW RECORDS ARE %s", len(new_records))
-                    if new_records is not None:
-                        return new_records
-                else:
-                    self.log.warning('Empty file found "%s" ignoring', resource.path)
-                    delete_file = True
-            self.log.info('here are the record sets %s', len(record_sets))
-            #if parsed:
-            #    self.log.debug('Moving "%s" to completed folder "%s".',
-            #                   resource.path, self.completed_folder)
-            #    shutil.move(temp_file.name, completed_path)
-            #    if attachment:
-            #        shutil.copy(completed_path, attachment)
-            #    delete_file = True
-            #if delete_file:
-            #    temp_file.delete = False  # Mark the file as cleaned up.
-            #    if self.remove_remote_completed:
-            #        polling_service.delete_file(resource)
-        log.debug("The processing entry yielded the sets %s of len", len(record_sets))
-        return record_sets
+        for parser_obj in self.parser_objs:
+            if not polling_service.name in parser_obj.datasources:
+                log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
+                continue
+            if not parser_obj.can_parse(resource.path):
+                log.info("The parser can't parse %s", resource.path)
+                continue
+            parsed = True
+            resource = parser_obj.parse(resource)
+            self.log.info("The new records are %s with headers %s", len(new_records), new_records[0])
+        frame = resource
+        log.debug("The processing entry yielded the sets %s of len", len(frame.data))
+        return frame

@@ -253,7 +253,7 @@ class SpreadSheetParser(BaseParser):
             return -1
         return 0
 
-    def parse(self, remote_path, local_path, completed_path):
+    def parse(self, resource):
         """Returns a list of sslogs parsed from a single file.
 
         :param remote_path: original path to the file on the remote system.
@@ -267,7 +267,9 @@ class SpreadSheetParser(BaseParser):
         :raises Exception: if parsing fails unexpectedly.
         """
 
-        _, filename = os.path.split(remote_path)
+        log.info("Trying to process %s", vars(resource))
+        log.info("My parse options are %s", self.parse_options)
+        filename = resource.path
 
         for report_params in self.parse_options:
             log.debug("Only parse using the correct params %s that match the filename %s.", report_params['report_pattern'], filename)
