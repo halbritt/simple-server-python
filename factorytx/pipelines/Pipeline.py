@@ -1,11 +1,12 @@
 import logging
 import yaml
 import os
+import time
 from jsonschema import validate
-from FactoryTx.managers.GlobalManager import global_manager
-from FactoryTx.managers.PluginManager import component_manager
-from FactoryTx.Global import setup_log
-from FactoryTx import utils
+from factorytx.managers.GlobalManager import global_manager
+from factorytx.managers.PluginManager import component_manager
+from factorytx.Global import setup_log
+from factorytx import utils
 
 global_manager = global_manager()
 try:
@@ -36,22 +37,44 @@ class DataPipeline(dict):
         self.tx = []
 
     def add_data_plugin(self, plugin_dict):
+        """ 
+        When adding data plugin, will also be adding transport blocks and parser blocks, need to check schemas, etc. 
+        before adding to config file 
         """
-        When adding data plugin, will also be adding transport blocks and parser blocks, need to check schemas, etc.
-        before adding to config file
-        """
+        parser = False
+        parser_good = False
+        datasource = False
+        datasource_good = False
         if len(plugin_dict) > 0:
             version = plugin_dict['version']
             plgn_type = plugin_dict['type']
             template_schema = self.get_schema('dataplugins', plgn_type, version)
             if self.validate_schema(plugin_dict, template_schema):
-                self.dataplugins.append(plugin_dict)
-                # TODO: Add validations for the parsers and datasources in this dataplugin.
+                if 'parsers' in plugin_dict['config'].keys():
+                    parser = True
+                    parsers = plugin_dict['config']['parsers']
+                    plgn_type = parsers[0]['type']
+                    version = parsers[0]['config']['version']
+                    template_schema = self.get_schema('parsers', plgn_type, version)
+                    if self.validate_schema(parsers, template_schema):
+                        parser_good = True
+                        print("PARSERS ADDED")
+                if 'datasources' in plugin_dict['config'].keys():
+                    datasource = True
+                    datasources = plugin_dict['config']['datasources']
+                    plgn_type = datasources[0]['type']
+                    version = datasources[0]['config']['version']
+                    template_schema = self.get_schema('transports', plgn_type, version)
+                    if self.validate_schema(datasources, template_schema):
+                        datasource_good = True
+                        print("DATASOURCES ADDED")
+                if (datasource and datasource_good) and (parser and parser_good):
+                    self.dataplugins.append(plugin_dict)
+                # self.dataplugins.append(plugin_dict)
                 return self.dataplugins
 
     def add_transform(self, transform_dict):
         if len(transform_dict) > 0:
-            print ("TRANSFORM DICT", transform_dict)
             version = transform_dict['config']['version']
             plgn_type = transform_dict['type']
             template_schema = self.get_schema('transforms', plgn_type, version)
@@ -61,16 +84,16 @@ class DataPipeline(dict):
 
     def add_tx(self, tx_dict):
         if len(tx_dict) > 0:
-            version = tx_dict['version']
+            version = tx_dict['config']['version']
             plgn_type = tx_dict['type']
             template_schema = self.get_schema('tx', plgn_type, version)
-            if self.validate_schema(tx_dict, template_schema):
+            if self.validate_schema(tx_dict, template_schema): 
                 self.tx.append(tx_dict)
                 return self.tx
 
     @staticmethod
     def plugin_template(component_type, plugin_name):
-        """ The (sub)component types are dataplugin, parser, transport, transform, tx, filters
+        """ The (sub)component types are dataplugin, parser, transport, transform, tx, filters 
             N.B. tranport, parsers are subcomponents """
         plgn = components[component_type].get_plugin(plugin_name)
         return plgn
@@ -83,7 +106,7 @@ class DataPipeline(dict):
         manager.load_schemas()
         schema = manager.get_plugin_schema(plugin_name, version)
         if not schema:
-            return ("Cannot find schema")
+            return ("Cannot find schema for", component_type, plugin_name, version)
         return schema
 
     @staticmethod
@@ -103,18 +126,50 @@ class DataPipeline(dict):
             some helpful error message if there is a problem
         """
         conformation_dict = {}
-        # config_file = yaml.dump(config_dict, yaml_file)
-        directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d'
-        out_file = os.path.join(directory, "test.cfg")
-        print (out_file)
-        if not os.path.exists(out_file):
-            os.makedirs(out_file)
-        object_file = open(out_file, 'w')
-        object_file.write(config_file)
-        object_file.close()
+        print (yaml.dump(config_dict, default_flow_style=False))
+        isfile = False
+        try:
+            if os.path.isfile(output_directory):
+                isfile = True
+                object_file = open(output_directory, "w")
+                object_file.write(yaml.dump(config_dict, default_flow_style=False))
+                object_file.close()
+            else:
+                print ("Error: File", output_directory, "does not appear to exist")
+        except IOError as e:
+            print ("Error: File", output_directory, "does not appear to exist")
+
+        if isfile:
+            conformation_dict['Time written'] = time.ctime(os.path.getmtime(output_directory))
+            conformation_dict['File size in bytes'] = os.path.getsize(output_directory)
+            conformation_dict['Name of config file'] = output_directory.split('/').pop()
+            print(conformation_dict)
+            return conformation_dict
+
+    def create_config_dict(self):
+        config_dict = {}
+        config_dict['pipeline'] = []
+        dataplugins = {}
+        dataplugins['dataplugins'] = self.dataplugins
+        transforms = {}
+        transforms['transforms'] = self.transforms
+        tx = {}
+        tx['tx'] = self.tx
+        if len(self.dataplugins) > 0:
+            config_dict['pipeline'].append(dataplugins)
+        if len(self.transforms) > 0:
+            config_dict['pipeline'].append(transforms)
+        if len(self.tx) > 0:
+            config_dict['pipeline'].append(tx)
+        if len(config_dict) == 0:
+            return ("There is nothing in the configuration dictionary")
+        else:
+            return config_dict
+
 
     @staticmethod
     def create_config_file():
         """ Just initialize and return Pipeline object """
         pipeline  = DataPipeline()
         return pipeline
+
