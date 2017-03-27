@@ -270,6 +270,9 @@ class SpreadSheetParser(BaseParser):
         log.info("Trying to process %s", vars(resource))
         log.info("My parse options are %s", self.parse_options)
         filename = resource.path
+        completed_path = resource.completed_path
+        local_path = resource.temp_file.name
+        print("The local path without ends is %s", local_path)
 
         for report_params in self.parse_options:
             log.debug("Only parse using the correct params %s that match the filename %s.", report_params['report_pattern'], filename)
@@ -277,12 +280,12 @@ class SpreadSheetParser(BaseParser):
                 continue
 
             log.debug("determine in the last parsed 'csv' file which lines should be excluded %s.", completed_path)
-            if completed_path is not None:
+            if os.path.exists(completed_path):
                 append = self.check_old_version(filename, completed_path, local_path)
             else:
                 append = None
 
-            if append > 0:
+            if append and append > 0:
                 offset = 0
                 configskip = []
                 load_opt = self.parse_options[0].get('load')
@@ -309,8 +312,7 @@ class SpreadSheetParser(BaseParser):
             try:
                 parsed_data = self.read_csv(local_path, skiprows=skip, **report_params)
             except Exception as e:
-                self.log.error('Failed to read_csv data from file {}. {}'.format(
-                    remote_path, e))
+                self.log.error('Failed to read_csv data from file. {}'.format(e))
                 raise
 
             if parsed_data.empty:

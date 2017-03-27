@@ -172,6 +172,15 @@ class PollingServiceBase(metaclass=ABCMeta):
         return self.resource_difference(resources, present, last)
 
     @abstractmethod
+    def prepare_resource(self):
+        """ The purpose of this method is to do any moving of the location of the specified resource
+            in order to prepare it to be processed quickly and easily. e.g. SMB/FTP polling services
+            will need to copy remote resources to a local place or load it into some buffer at the
+            minimum.
+        """
+        pass
+
+    @abstractmethod
     def return_resource_class(self):
         """ Return the class of the resource that this polling service uses. """
         pass

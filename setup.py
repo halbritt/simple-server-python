@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os, sys, glob, fnmatch
 
 entry_names = ['dataplugins', 'transforms', 'tx', 'filters']
-sub_entry_names = ['transports', 'parsers']
+sub_entry_names = ['pollingservices', 'parsers']
 entrypoints = [os.path.join(os.path.dirname(__file__), 'factorytx', 'components', x, x + '.ini') \
                for x in entry_names]
 entrypoints += [os.path.join(os.path.dirname(__file__), 'factorytx/components/dataplugins', x, x + '.ini') \

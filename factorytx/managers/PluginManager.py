@@ -130,7 +130,7 @@ DATA_DIRECTORIES = [ 'factorytx.components.dataplugins,factorytx.reservecomponen
                     'factorytx.components.filters,factorytx.reservecomponents.filters',
                     'factorytx.components.tx,factorytx.reservecomponents.tx']
 SUBDATA_DIRECTORIES = ['factorytx.components.dataplugins.parsers,factorytx.reservecomponents.dataplugins.parsers',
-                       'factorytx.components.dataplugins.transports,factorytx.reservecomponents.dataplugins.transports']
+                       'factorytx.components.dataplugins.pollingservices,factorytx.reservecomponents.dataplugins.pollingservices']
 
 COMPONENT_MANAGER = { p.split(',')[0][21:]: PluginManager(p, [getattr(factorytx, 'R_' + p.split(',')[0][21:].upper() + '_DIRS'), getattr(factorytx, p.split(',')[0][21:].upper() + '_DIRS')]) for p in DATA_DIRECTORIES }
 for entry in SUBDATA_DIRECTORIES:
