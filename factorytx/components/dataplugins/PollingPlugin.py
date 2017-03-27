@@ -79,7 +79,8 @@ class PollingPlugin(DataPlugin):
             parsed = True
             resource = polling_service.prepare_resource(resource)
             resource = parser_obj.parse(resource)
-            self.log.info("The new records are %s with headers %s", len(new_records), new_records[0])
+            self.log.info("The new records are %s lines long.", len(resource))
+            self.log.info("The headers are %s.", resource.iloc(0))
         frame = resource
-        log.debug("The processing entry yielded the sets %s of len", len(frame.data))
+        log.debug("The processing entry yielded the sets %s of len", len(frame))
         return frame
