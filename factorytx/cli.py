@@ -67,7 +67,7 @@ def main(nocore: bool, web: bool, bindall: bool, directory: click.Path, conf_fil
     LOG.info("Starting factorytx. Build: %s", build_version)
     MANAGERS['parser_manager'].load_schemas()
     MANAGERS['plugin_manager'].load_schemas()
-    MANAGERS['transport_manager'].load_schemas()
+    MANAGERS['pollingservice_manager'].load_schemas()
     MANAGERS['tx_manager'].load_schemas()
     MANAGERS['transformation_manager'].load_schemas()
     MANAGERS['filter_manager'].load_schemas()

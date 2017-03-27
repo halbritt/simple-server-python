@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os, sys, glob, fnmatch
 
 entry_names = ['dataplugins', 'transforms', 'tx', 'filters']
-sub_entry_names = ['transports', 'parsers']
+sub_entry_names = ['pollingservices', 'parsers']
 entrypoints = [os.path.join(os.path.dirname(__file__), 'factorytx', 'components', x, x + '.ini') \
                for x in entry_names]
 entrypoints += [os.path.join(os.path.dirname(__file__), 'factorytx/components/dataplugins', x, x + '.ini') \
@@ -29,7 +29,7 @@ package_data = {
 
 setup(
     name = "factorytx",
-    version = 0.0.1,
+    version = "0.1.0",
     download_url = '',
     description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
     long_description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
