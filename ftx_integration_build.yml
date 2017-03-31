@@ -11,7 +11,7 @@ volumes:
 services:
     factorytx_send:
         container_name: factorytx_send
-        hostname: factorytx
+        hostname: factorytx_send
         image: sightmachine/factorytx
         networks:
             - factorytx-net
@@ -27,7 +27,7 @@ services:
 
     factorytx_receive:
         container_name: factorytx_receive
-        hostname: factorytx
+        hostname: factorytx_receive
         image: sightmachine/factorytx
         networks:
             - factorytx-net

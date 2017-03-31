@@ -4,7 +4,7 @@
 # To build (from FactoryTx directory):
 # sudo docker build -t factorytx .
 
-FROM ubuntu:14.04.5
+FROM ubuntu:16.04
 MAINTAINER Anthony Oliver <anthony@sightmachine.com>
 
 ##############################
@@ -13,6 +13,7 @@ MAINTAINER Anthony Oliver <anthony@sightmachine.com>
 ENV USER sm
 RUN mkdir /opt/sightmachine && useradd -ms /bin/bash sm && \
     chown sm:sm /opt/sightmachine && \
+    mkdir /etc/rsyslog.d/ && \
     touch /etc/rsyslog.d/30-ma.conf && \
     echo '$ModLoad imudp\n$UDPServerRun 514\n$MaxMessageSize 64k\n$EscapeControlCharactersOnReceive off\n$RepeatedMsgContainsOriginalMsg on\n$template malog,"/var/log/ma/%app-name%.log"\n$template matenantlog,"/var/log/ma/%app-name%.%procid%.log"\nif ($app-name startswith "ma_") and ($procid == "base" or $procid == "") then ?malog\n& ~\nif ($app-name startswith "ma_") then ?matenantlog\n& ~' > /etc/rsyslog.d/30-ma.conf
 WORKDIR /opt/sightmachine
