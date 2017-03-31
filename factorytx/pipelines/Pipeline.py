@@ -58,7 +58,6 @@ class DataPipeline(dict):
                     template_schema = self.get_schema('parsers', plgn_type, version)
                     if self.validate_schema(parsers, template_schema):
                         parser_good = True
-                        print("PARSERS ADDED")
                 if 'datasources' in plugin_dict['config'].keys():
                     datasource = True
                     datasources = plugin_dict['config']['datasources']
@@ -67,10 +66,12 @@ class DataPipeline(dict):
                     template_schema = self.get_schema('transports', plgn_type, version)
                     if self.validate_schema(datasources, template_schema):
                         datasource_good = True
-                        print("DATASOURCES ADDED")
-                if (datasource and datasource_good) and (parser and parser_good):
-                    self.dataplugins.append(plugin_dict)
-                # self.dataplugins.append(plugin_dict)
+                if ((datasource and datasource_good) and (parser and parser_good)) or ((not datasource) and (parser and parser_good)) or ((not parser) and (datasource and datasource_good)):
+                    """
+                        To ensure the order is correct in the config file, put every element of the dictionary by looping into the list 
+                    """
+                    for key, value in plugin_dict.items():
+                        self.dataplugins.append([key, value])
                 return self.dataplugins
 
     def add_transform(self, transform_dict):
@@ -78,8 +79,12 @@ class DataPipeline(dict):
             version = transform_dict['config']['version']
             plgn_type = transform_dict['type']
             template_schema = self.get_schema('transforms', plgn_type, version)
-            if self.validate_schema(transform_dict, template_schema):
-                self.transforms.append(transform_dict)
+            if self.validate_schema(transform_dict['config'], template_schema):
+                """
+                    To ensure the order is correct in the config file, put every element of the dictionary by looping into the list
+                """
+                for key, value in transform_dict.items():
+                    self.transforms.append([key, value])
                 return self.transforms
 
     def add_tx(self, tx_dict):
@@ -87,9 +92,60 @@ class DataPipeline(dict):
             version = tx_dict['config']['version']
             plgn_type = tx_dict['type']
             template_schema = self.get_schema('tx', plgn_type, version)
-            if self.validate_schema(tx_dict, template_schema): 
-                self.tx.append(tx_dict)
+            if self.validate_schema(tx_dict, template_schema):
+                """ To ensure the order is correct in the config file, put every element of the dictionary by looping into the list
+                """
+                for key, value in tx_dict.items():
+                    self.tx.append([key, value])
                 return self.tx
+
+    @classmethod
+    def insert_datasource(cls, service, datasource):
+        """ add datasource and then return service """
+        if 'type' in datasource.keys():
+            plgn_type = datasource['type']
+            template_schema = cls.get_schema('transports', plgn_type)
+            if clas.validate_schema(datasource, template_schema):    
+            service.update({'datasources':datasource})
+        return service
+
+    @classmethod
+    def insert_parser(cls, plugin, parser):
+        """ add parser and then return plugin """
+        if 'type' in parser.keys():
+            plgn_type = parser['type']
+            template_schema = cls.get_schema('parsers', plgn_type) 
+            if cls.validate_schema(parser, template_schema):
+                plugin.update({'parsers':parser})
+        print('plugin', plugin)
+        return plugin
+
+    @classmethod
+    def insert_pollingservice(cls, plugin, pollingservice):
+        """ add pllingservice and then return plugin """
+        plugin.update({'polling service':pollingservice})
+        return plugin
+    
+    @staticmethod
+    def create_dataplugin_template(name, version=None):
+        """ return the template validate"""
+        plgn_template = components['dataplugins'].get_plugin_schema(name, version)
+        print("dataplugin template", plgn_template)
+        return plgn_template
+    
+    @staticmethod 
+    def create_transform_template(name, version=None):
+        """ return the template validate """
+        transform_template  = components['transforms'].get_plugin_schema(name, version)
+        print("transform_template", transform_template)
+        return transform_template
+
+    @staticmethod
+    def create_tx_template(name, version=None):
+        """ return the template validate """
+        tx_template  = components['tx'].get_plugin_schema(name, version)
+        print("tx_template", tx_template)
+        return tx_template
 
     @staticmethod
     def plugin_template(component_type, plugin_name):
@@ -126,13 +182,12 @@ class DataPipeline(dict):
             some helpful error message if there is a problem
         """
         conformation_dict = {}
-        print (yaml.dump(config_dict, default_flow_style=False))
         isfile = False
         try:
             if os.path.isfile(output_directory):
                 isfile = True
                 object_file = open(output_directory, "w")
-                object_file.write(yaml.dump(config_dict, default_flow_style=False))
+                object_file.write(yaml.dump(config_dict, indent=2, default_flow_style=False))
                 object_file.close()
             else:
                 print ("Error: File", output_directory, "does not appear to exist")

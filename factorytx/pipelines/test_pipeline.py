@@ -37,17 +37,17 @@ def test_full_plugin():
     pipeline = DataPipeline.create_config_file()
     with open('/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/client.cfg', 'r') as f:
         config = yaml.load(f)['pipeline'][0]
-    """with open('/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/client.cfg', 'r') as f:
+    with open('/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/client.cfg', 'r') as f:
         config1 = yaml.load(f)['pipeline'][1]
     with open('/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/client.cfg', 'r') as f:
-        config2 = yaml.load(f)['pipeline'][2]"""
+        config2 = yaml.load(f)['pipeline'][2]
 
     plugins = config['dataplugins']
     for plugin in plugins:
         print("Adding the plugin", plugin)
         pipeline.add_data_plugin(plugin)
 
-    """transforms = config1['transforms']
+    transforms = config1['transforms']
     for transform in transforms:
         print("Adding the transform", transform)
         pipeline.add_transform(transform)
@@ -55,7 +55,7 @@ def test_full_plugin():
     txs = config2['tx']
     for tx in txs:
         print("Adding the tx", tx)
-        pipeline.add_tx(tx)"""
+        pipeline.add_tx(tx)
 
     config_dict = pipeline.create_config_dict()
     output_directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/test.cfg'
@@ -63,4 +63,15 @@ def test_full_plugin():
 
     assert 0
 
+def test_template_creation():
+    tx_template = DataPipeline.create_tx_template('localtx')
+    dataplugin_template = DataPipeline.create_dataplugin_template('file')
+    transforms_template = DataPipeline.create_transform_template('sslogtransform')
+    assert 0
 
+def test_inserts():
+    dataplugin_template = DataPipeline.create_dataplugin_template('file')
+    parser = {'type': 'spreadsheetparser','version':'1.0.0', 'parse_options':[]}
+    DataPipeline.insert_parser(dataplugin_template, parser)
+
+    assert 0
