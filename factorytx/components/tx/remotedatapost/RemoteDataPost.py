@@ -3,6 +3,7 @@ import requests
 import base64
 import bson
 import gzip
+import sys
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -67,7 +68,7 @@ class RemoteDataPost(BaseTX):
         print("Got the response %s", resp)
         status_code = resp.status_code
         if status_code < 200 or status_code >= 300:
-            print("Iteration %d) ERROR: Failed to retrieve response: code=%s, text=%s" % (iterCnt, status_code, resp.text))
+            print("Iteration) ERROR: Failed to retrieve response: code=%s, text=%s" % (status_code, resp.text))
             result = {'code': status_code, 'text': resp.text}
             sys.stdout.write("E")
         else:

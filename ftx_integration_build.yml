@@ -1,0 +1,42 @@
+version: '2'
+
+networks:
+    factorytx-net:
+        driver: bridge
+
+volumes:
+    log-data-volume:
+        external: true
+
+services:
+    factorytx_send:
+        container_name: factorytx_send
+        hostname: factorytx
+        image: sightmachine/factorytx
+        networks:
+            - factorytx-net
+        build:
+            context: /opt/sightmachine/factorytx
+            dockerfile: Dockerfile
+        tty: true
+        volumes:
+            - ./FactoryTx/pipelines/conf.d/int_send:/opt/sightmachine/FactoryTx/FactoryTx/pipelines/conf.d/
+            - ./databuffer/:/var/spool/sightmachine/FactoryTx/
+            - ./:/opt/sightmachine/FactoryTx/
+            - /var/log/sightmachine/factorytx/int_send:/var/log/sightmachine/factorytx/
+
+    factorytx_receive:
+        container_name: factorytx_receive
+        hostname: factorytx
+        image: sightmachine/factorytx
+        networks:
+            - factorytx-net
+        build:
+            context: /opt/sightmachine/factorytx
+            dockerfile: Dockerfile
+        tty: true
+        volumes:
+            - ./FactoryTx/pipelines/conf.d/int_receive:/opt/sightmachine/FactoryTx/FactoryTx/pipelines/conf.d/
+            - ./databuffer/:/var/spool/sightmachine/FactoryTx/
+            - ./:/opt/sightmachine/FactoryTx/
+            - /var/log/sightmachine/factorytx/int_receive:/var/log/sightmachine/factorytx/
