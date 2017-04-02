@@ -2,15 +2,17 @@
 # FactoryTx Dockerfile
 #
 # To build (from FactoryTx directory):
-# sudo docker build -t factorytx .
+# docker build -t factorytx .
 
 FROM ubuntu:16.10
-MAINTAINER Anthony Oliver <anthony@sightmachine.com>
+MAINTAINER Sight Machine <ops@sightmachine.com>
 
 ##############################
 # Environment
 ##############################
 RUN useradd -ms /bin/bash sm
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
 ENV USER sm
 RUN adduser sm sudo
 WORKDIR /home/sm
@@ -61,6 +63,6 @@ RUN cd /opt/sightmachine/factorytx && \
 RUN chown -R sm:sm /opt/sightmachine
 
 # RUN python3.6 -m pytest tests
-# CMD factorytx
 USER sm
+# CMD factorytx
 CMD ["/bin/bash"]
