@@ -41,5 +41,6 @@ pipeline {
             echo 'clean up'
             // sh 'rm -rf factorytx-venv ** dist'
             // sendNotifications currentBuild.result
+        }
     }
 }
