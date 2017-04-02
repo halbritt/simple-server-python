@@ -44,20 +44,20 @@ class LocalFileTransport(PollingServiceBase):
 
     def prepare_resource(self, resource):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            print("Copying the file")
+            self.log.info("Copying the file")
             self.copy_file(resource, temp_file.name)
-            print("Force temporary file to retain time")
+            self.log.info("Force temporary file to retain time")
             try:
                 os.utime(temp_file.name, (int(float(resource.mtime)), int(float(resource.mtime))))
             except Exception as e:
-                print("There was an error:", e)
+                self.log.error("There was an error processing %s: %s", temp_file.name, e)
             file_size = os.path.getsize(temp_file.name)
-            print("Copied %s bytes from remote file %s to %s", file_size, resource.path, temp_file.name)
+            self.log.info("Copied %s bytes from remote file %s to %s", file_size, resource.path, temp_file.name)
             completed_path = os.path.join(self.completed_folder, os.path.basename(resource.path))
-            print("Found the completed path %s", completed_path)
+            self.log.info("Found the completed path %s", completed_path)
             resource.completed_path = completed_path
-            resource.temp_file = temp_file
-        print("Completed the resource preparation")
+            resource.temp_file = temp_file.name
+        self.log.info("Completed the resource preparation")
         return resource
 
     def return_resource_class(self):

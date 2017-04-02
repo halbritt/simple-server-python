@@ -73,10 +73,6 @@ class PollingPlugin(DataPlugin):
             if not polling_service.name in parser_obj.datasources:
                 log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
                 continue
-            if not parser_obj.can_parse(resource.path):
-                log.info("The parser can't parse %s", resource.path)
-                continue
-            parsed = True
             resource = polling_service.prepare_resource(resource)
             resource = parser_obj.parse(resource)
             self.log.info("The new records are %s lines long.", len(resource))
