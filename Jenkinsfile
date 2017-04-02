@@ -10,12 +10,14 @@ pipeline {
         }
     stages {
         stage ('Virtualenv setup') {
-            echo "create virtualenv and install factorytx here"
-            // script {
-            //          env['SMTOOL_BUILD'] = true
-            //          env['SMTOOL_CONFIG_DIR'] = env['WORKSPACE']
-            //          sh 'virtualenv factorytx-venv && . factorytx-venv/bin/activate && python $(which pip) install . && python $(which pip) install -r test-requirements.txt'
-            //      }
+            steps {
+                echo "create virtualenv and install factorytx here"
+                // script {
+                //          env['SMTOOL_BUILD'] = true
+                //          env['SMTOOL_CONFIG_DIR'] = env['WORKSPACE']
+                //          sh 'virtualenv factorytx-venv && . factorytx-venv/bin/activate && python $(which pip) install . && python $(which pip) install -r test-requirements.txt'
+                //      }
+            }
         }
         stage('Test') {
             steps {
