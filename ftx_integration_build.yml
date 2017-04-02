@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 networks:
     factorytx-net:
@@ -6,7 +6,9 @@ networks:
 
 volumes:
     log-data-volume:
-        external: true
+        driver: local
+    pip-cache:
+        driver: local
 
 services:
     factorytx_send:
@@ -24,6 +26,7 @@ services:
             - ./databuffer/:/var/spool/sightmachine/FactoryTx/
             - ./:/opt/sightmachine/FactoryTx/
             - /var/log/sightmachine/factorytx/int_send:/var/log/sightmachine/factorytx/
+            - pip-cache:/root/.cache/pip/
 
     factorytx_receive:
         container_name: factorytx_receive
@@ -40,3 +43,4 @@ services:
             - ./databuffer/:/var/spool/sightmachine/FactoryTx/
             - ./:/opt/sightmachine/FactoryTx/
             - /var/log/sightmachine/factorytx/int_receive:/var/log/sightmachine/factorytx/
+            - pip-cache:/root/.cache/pip/

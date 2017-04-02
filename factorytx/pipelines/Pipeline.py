@@ -51,7 +51,7 @@ class DataPipeline(dict):
 
     def add_transform(self, transform_dict):
         if len(transform_dict) > 0:
-            print ("TRANSFORM DICT", transform_dict)
+            print("TRANSFORM DICT", transform_dict)
             version = transform_dict['config']['version']
             plgn_type = transform_dict['type']
             template_schema = self.get_schema('transforms', plgn_type, version)
@@ -94,7 +94,7 @@ class DataPipeline(dict):
             validate(new_schema, template_schema)
             return True
         except Exception as e:
-            print ("Error validating schema: ", e)
+            print("Error validating schema: ", e)
             return False
 
     @staticmethod
@@ -106,7 +106,7 @@ class DataPipeline(dict):
         # config_file = yaml.dump(config_dict, yaml_file)
         directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d'
         out_file = os.path.join(directory, "test.cfg")
-        print (out_file)
+        print(out_file)
         if not os.path.exists(out_file):
             os.makedirs(out_file)
         object_file = open(out_file, 'w')
