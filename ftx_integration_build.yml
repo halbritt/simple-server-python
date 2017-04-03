@@ -26,7 +26,7 @@ services:
             dockerfile: Dockerfile
         tty: true
         volumes:
-            - ./factorytx/pipelines/conf.d/int_send:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
+            # - ./factorytx/pipelines/conf.d/int_send:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
             - ./:/opt/sightmachine/factorytx/
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - send-log-data-volume:/var/log/sightmachine/factorytx/
@@ -43,7 +43,7 @@ services:
             dockerfile: Dockerfile
         tty: true
         volumes:
-            - ./factorytx/pipelines/conf.d/int_receive:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
+            # - ./factorytx/pipelines/conf.d/int_receive:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
             - ./:/opt/sightmachine/factorytx/
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - receive-log-data-volume:/var/log/sightmachine/factorytx/

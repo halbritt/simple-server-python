@@ -10,14 +10,14 @@ MAINTAINER Sight Machine <ops@sightmachine.com>
 ##############################
 # Environment
 ##############################
-RUN useradd -ms /bin/bash sm
+# RUN useradd -ms /bin/bash sm
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
-ENV USER sm
-RUN adduser sm sudo
-WORKDIR /home/sm
-# WORKDIR /opt/sightmachine
-
+# ENV USER sm
+# RUN adduser sm sudo
+# WORKDIR /home/sm
+WORKDIR /opt/sightmachine
+RUN mkdir -p /var/status/factorytx/temp
 ##############################
 # Dependencies
 ##############################
@@ -35,34 +35,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-setuptools \
     libev-dev \
     libpq-dev \
-    libffi-dev
-    # vim \
+    libffi-dev \
+    vim \
+    iputils-ping
 #    freetds-dev \
 #    libmysqlclient-dev
 
-RUN easy_install3 -U pip && python3.6 -m pip install --upgrade pip
-# RUN python3.6 -m pip install -U distribute
+RUN easy_install3 -U pip && python3.6 -m pip install -U pip
+RUN pip3.6 install -U setuptools==33.1.1
+# RUN pip3.6 install -U distribute
 # RUN mkdir -p /root/.pip && \
 #     echo "[global]\nno-index = true\nfind-links = https://sm-mirror.s3-us-west-2.amazonaws.com/pip/index.html" > /root/.pip/pip.conf
 COPY ./requirements.txt /opt/sightmachine/factorytx/requirements.txt
 RUN cd /opt/sightmachine/factorytx && \
-    python3.6 -m pip install -r requirements.txt
+    pip3.6 install -r requirements.txt
 
 
 RUN mkdir -p /var/spool/sightmachine/factorytx/
-RUN chown -R sm:sm /var/spool/sightmachine/
+# RUN chown -R sm:sm /var/spool/sightmachine/
 VOLUME /var/spool/sightmachine/factorytx
 
 # Copy from factorytx from current repo and install
 COPY ./ /opt/sightmachine/factorytx
 
 RUN cd /opt/sightmachine/factorytx && \
-    python3.6 -m pip install . && \
-    python3.6 -m compileall .
+    pip3.6 install -e .
+    # python3.6 -m compileall .
 
-RUN chown -R sm:sm /opt/sightmachine
+# RUN chown -R sm:sm /opt/sightmachine
 
 # RUN python3.6 -m pytest tests
-USER sm
+# USER sm
 # CMD factorytx
 CMD ["/bin/bash"]
