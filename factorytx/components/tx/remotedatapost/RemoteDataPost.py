@@ -34,7 +34,7 @@ class RemoteDataPost(BaseTX):
             self.log.debug("Made the payload")
             ship = self.send_http_request(payload)
             self.log.info("Finished the TX", ship)
-        return False
+        return True
 
     def setup_request(self):
         tenantname = self.tenantname
