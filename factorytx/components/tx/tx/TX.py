@@ -28,9 +28,6 @@ except:
 
 log = logging.getLogger(__name__)
 
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
-
 class TXAbstract(object):
     """
     TX is a framework for building transformations that can handle
@@ -70,8 +67,11 @@ class TXAbstract(object):
             os.mkdir(self.tx_persistence_location)
         self.tx_ref = shelve.open(os.path.join(self.tx_dict_location, self.tx_dict_name))
         for tx_cfg in self.tx:
-            self.log.debug("Loading the TX configuration %s", tx_cfg)
+            self.log.info("Loading the TX configuration %s", tx_cfg)
+            if not 'log_level' in tx_cfg['config']:
+                tx_cfg['config']['log_level'] = self.log_level
             tx_obj = self._load_plugin(tx_manager, tx_cfg)
+            self.log.debug("The tx options are", tx_obj.options)
             self.tx_objs.append(tx_obj)
 
     def populate_out(self) -> ():
@@ -107,12 +107,12 @@ class TXAbstract(object):
                 log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
                 confirmation = tx.TX(dataframe)
                 if confirmation:
-                    log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx.__name__)
+                    log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
                 else:
                     log.info("Failed to TX the frame %s", frame_id)
                     passed_all = False
         if passed_all:
-            log.info("Sucessfuly TXed the frame %s with tx %s", frame_id)
+            log.info("Sucessfuly TXed the frame %s with all txes", frame_id)
             confirm = self.remove_frame(frame_info['frame_path'])
             if confirm:
                 frame_info['confirmation'] = True
@@ -157,45 +157,6 @@ class TXAbstract(object):
         self.out_pipe[frame_id] = False
         log.info("Persisted the frame and registered it with my references")
         log.info("The out is %s", vars(self.out_pipe))
-
-
-    def encrypt(self, dataframe: pd.DataFrame):
-        """ Given a DATAFRAME, encrypt it into the right format. """
-        gm = global_manager
-        if not gm.get_encryption():
-            return records
-
-        (encryption_public_key,
-         encryption_padding,
-         sha1_digest) = gm.get_encryption()
-
-        symmetric_key = Fernet.generate_key()
-        encrypter = Fernet(symmetric_key)
-        encrypted_key = encryption_public_key.encrypt(
-                        symmetric_key,
-                        encryption_padding)
-
-        exclude_keys = ["source", "timestamp", "counter", "poll_rate"]
-        for ts, data in records.items():
-            enc_data = {}
-            enc_fields = []
-
-            for k, v in data.items():
-                if k in exclude_keys:
-                    enc_data[k] = v
-                else:
-                    enc_data[k] = encrypter.encrypt(json.dumps(v))
-                    enc_fields.append(k)
-
-            enc_data['encryption'] = dict(
-                key=base64.b64encode(encrypted_key),
-                fields=enc_fields,
-                pubkey_sha1=sha1_digest,
-                encoding="field-encrypt-v1"
-            )
-
-            records[ts] = enc_data
-        return records
 
     @property
     def connected(self):
