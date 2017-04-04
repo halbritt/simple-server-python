@@ -7,7 +7,7 @@ import sys
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import hashlib
 from io import BytesIO
 from factorytx.components.tx.basetx import BaseTX
 from factorytx.managers.PluginManager import component_manager
@@ -57,6 +57,7 @@ class RemoteDataPost(BaseTX):
                 'host':hosturl, 'route':rel_url}
 
     def send_http_request(self, payload):
+        print("Going to send the payload now")
         setup = self.request_setup
         if self.use_encryption:
             filetuple = ('p.tmp', payload)
@@ -104,10 +105,8 @@ class RemoteDataPost(BaseTX):
 
     def encode_data(self, data):
         # set password
-        salt = b"staticsalt"
-        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=100000,
-                         backend=default_backend())
-        key = base64.urlsafe_b64encode(kdf.derive(bytes(self.apikey, 'utf-8')))
+        binarykey = hashlib.sha256(bytes(self.apikey, 'utf-8')).digest()
+        key = base64.urlsafe_b64encode(binarykey)
         cipher_suite = Fernet(key)
         encoded_text = cipher_suite.encrypt(bytes(data.getvalue()))
 
