@@ -121,7 +121,10 @@ class PluginManager(object):
         :param str name: The name of the plugin desired.
         :returns: The loaded plugin
         """
+        print("The plugin name is", name)
+        print("My plugins are %s", self.plugins)
         plugin = self.plugins.get(name)
+        print("The plugin is", plugin)
         if plugin:
             return plugin.load()
 

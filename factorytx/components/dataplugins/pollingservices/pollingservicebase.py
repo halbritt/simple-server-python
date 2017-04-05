@@ -50,6 +50,8 @@ class PollingServiceBase(metaclass=ABCMeta):
 
     def setup_log(self, logname):
         log.debug("My params are %s.", vars(self))
+        if not getattr(self, 'plugin_type', []):
+            self.plugin_type = self.protocol
         self.log = logging.getLogger(self.plugin_type + ': ' + logname)
 
     def loadParameters(self, schema, conf):
@@ -58,6 +60,8 @@ class PollingServiceBase(metaclass=ABCMeta):
         self.__dict__.update(conf)
         merge_schema_defaults(schema, self.__dict__)
         log.info(self.resource_dict_location)
+        if not 'name' in conf:
+            conf['name'] = str(uuid4())[:8]
         resource_path = os.path.join(self.resource_dict_location, conf['name'])
         self.resources = shelve.open(resource_path + "resource-reference")
         self.resource_keys = shelve.open(resource_path +'resource-keys')

@@ -147,7 +147,8 @@ class DataPluginAbstract(object):
         return records
 
     def _load_plugin(self, manager, cfg):
-        cfg['config'].update({'source': self.source, 'resource_dict_location':self.resource_dict_location})
+        if 'config' in cfg:
+            cfg['config'].update({'source': self.source, 'resource_dict_location':self.resource_dict_location})
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
