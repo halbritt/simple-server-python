@@ -206,6 +206,8 @@ class Config(dict):
                         elif not parsers and not next_cat[0] == 'dataplugins':
                             no_parsers = True
                             continue
+                        else:
+                            plgn_cfg['name'] = plugin['name']
 
                         try:
                             validate(plgn_cfg, plgn_schema)

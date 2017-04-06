@@ -6,6 +6,7 @@ import tempfile
 
 from factorytx.components.dataplugins.pollingservices.pollingservicebase import PollingServiceBase
 from factorytx.components.dataplugins.resources.rdp1payload import RDP1Payload
+from factorytx.components.dataplugins.serverservices.rdp1server import RDP1Server
 
 
 class RDP1(PollingServiceBase):
@@ -37,3 +38,7 @@ class RDP1(PollingServiceBase):
 
     def resource_difference(self, resources, present_resources, last_resource):
         return resources
+
+    def start(self):
+        print("Do the right thing to start the server here")
+        self.server = RDP1Server.start_server(self.host, self.port)

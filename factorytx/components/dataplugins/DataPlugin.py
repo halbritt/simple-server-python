@@ -9,7 +9,6 @@ from datetime import timedelta
 from bson import ObjectId
 
 from time import sleep
-from uuid import uuid4
 from factorytx.DataService import DataService
 from factorytx.managers.GlobalManager import global_manager
 from factorytx.Global import setup_log
