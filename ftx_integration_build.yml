@@ -53,6 +53,8 @@ services:
         container_name: simpledata
         image: sightmachine/simpledata
         hostname: simpledata
+        networks:
+            - factorytx-net
         build:
             context: ../SimpleData/
             dockerfile: Dockerfile

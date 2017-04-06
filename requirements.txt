@@ -43,7 +43,7 @@ xlrd
 pytest
 fixtures
 pylint
-pyflake
+pyflakes
 pep8
 dateparser
 cov-core
