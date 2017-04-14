@@ -74,4 +74,10 @@ def test_inserts():
     parser = {'type': 'spreadsheetparser','version':'1.0.0', 'parse_options':[]}
     DataPipeline.insert_parser(dataplugin_template, parser)
 
+    """tx_template = DataPipeline.create_tx_tempalte('localtx')
+    pollingservice = {}
+    DataPipeline.insert_pollingservice(tx_template, pollingservice)"""
+
+    # entire service, add datasources
+
     assert 0
