@@ -25,15 +25,29 @@ components = component_manager()
 
 @fixture(scope='module')
 def get_schema_candidates():
+    """
+    Candidates for testing get_schema function.
+
+    """
     return [('dataplugins', 'file'), ('dataplugins', 'pollipc'), ('dataplugins', 'sql'),
             ('transports', 'ftp'), ('transports', 'localfile'), ('transports', 'ftp'),
             ('parsers', 'spreadsheetparser'), ('parsers', 'knifedataparser'), ('parsers', 'testparser')]
 
 def test_get_schema(get_schema_candidates):
+    """
+    Testing the get_schema function with valid candidates
+
+    """
     for candidate in get_schema_candidates:
        assert(DataPipeline.get_schema(candidate[0], candidate[1]))
 
 def test_full_plugin():
+    """
+    Testing the entire work flow from adding plugins, transforms, and 
+    tx's.  Creates the config_dict and writes to a file called
+    'test.cfg' in the conf.d directory.
+
+    """
     pipeline = DataPipeline.create_config_file()
     with open('/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/client.cfg', 'r') as f:
         config = yaml.load(f)['pipeline'][0]
@@ -64,12 +78,20 @@ def test_full_plugin():
     assert 0
 
 def test_template_creation():
+    """
+    Testing the template create functions.
+
+    """
     tx_template = DataPipeline.create_tx_template('localtx')
     dataplugin_template = DataPipeline.create_dataplugin_template('file')
     transforms_template = DataPipeline.create_transform_template('sslogtransform')
     assert 0
 
 def test_inserts():
+    """
+    Testing the insert functions.
+    
+    """
     dataplugin_template = DataPipeline.create_dataplugin_template('file')
     parser = {'type': 'spreadsheetparser','version':'1.0.0', 'parse_options':[]}
     DataPipeline.insert_parser(dataplugin_template, parser)

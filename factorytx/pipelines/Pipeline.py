@@ -2,7 +2,6 @@ import logging
 import yaml
 import os
 import time
-import collections
 from jsonschema import validate
 from factorytx.managers.GlobalManager import global_manager
 from factorytx.managers.PluginManager import component_manager
@@ -43,7 +42,8 @@ class DataPipeline(dict):
         plugins that are ultimately added to the outputed configuration 
         file.  It validates the schema given by plugin_dict before 
         adding the plugin to the class list.  Also validates the parsers 
-        and datasources schemas within the dict.
+        and datasources schemas within the dictionary before adding. 
+        Returns the dataplugins list.
 
         """
         parser = False
@@ -56,7 +56,8 @@ class DataPipeline(dict):
             template_schema = self.get_schema('dataplugins', plgn_type,\
                     version)
             if self.validate_schema(plugin_dict, template_schema):
-                if 'parsers' in plugin_dict['config'].keys():
+                if 'parsers' in plugin_dict['config'].keys(): 
+                    # check that parsers are actually in the config
                     parser = True
                     parsers = plugin_dict['config']['parsers']
                     plgn_type = parsers[0]['type']
@@ -66,6 +67,7 @@ class DataPipeline(dict):
                     if self.validate_schema(parsers, template_schema):
                         parser_good = True
                 if 'datasources' in plugin_dict['config'].keys():
+                    # check that datasources are actually in the config
                     datasource = True
                     datasources = plugin_dict['config']['datasources']
                     plgn_type = datasources[0]['type']
@@ -86,7 +88,7 @@ class DataPipeline(dict):
         This function will add a transform to a class list of transforms 
         that are ultimately addedto the outputed configuration file.  
         It validates the schema given by transform_dict before adding 
-        the transform to the class list.
+        the transform to the class list. Returns the transforms list.
 
         """
         if len(transform_dict) > 0:
@@ -102,7 +104,7 @@ class DataPipeline(dict):
         This function will add a tx to a class list of tx that are 
         ultimately added to the outputed configuration file.  It 
         validates the schema given by tx_dict before adding the tx to 
-        the class list.
+        the class list. Returns the tx list.
 
         """
         if len(tx_dict) > 0:
@@ -114,18 +116,26 @@ class DataPipeline(dict):
                 return self.tx
 
     @classmethod
-    def insert_datasource(cls, service, datasource):
-        """ add datasource and then return service """
-        if 'type' in datasource.keys():
+    def insert_datasource(cls, service, datasource: dict):
+        """ 
+        This function inserts a datasource into a specified service.
+        It returns the updated service.
+
+        """
+        if 'type' in datasource.keys(): 
             plgn_type = datasource['type']
             template_schema = cls.get_schema('transports', plgn_type)
-            if clas.validate_schema(datasource, template_schema):    
+            if cls.validate_schema(datasource, template_schema):    
                 service.update({'datasources':datasource})
         return service
 
     @classmethod
-    def insert_parser(cls, plugin, parser):
-        """ add parser and then return plugin """
+    def insert_parser(cls, plugin, parser: dict):
+        """ 
+        This function inserts a parser into a specific plugin.
+        It returns the updated plugin.
+        
+        """
         if 'type' in parser.keys():
             plgn_type = parser['type']
             template_schema = cls.get_schema('parsers', plgn_type) 
@@ -135,30 +145,43 @@ class DataPipeline(dict):
         return plugin
 
     @classmethod
-    def insert_pollingservice(cls, plugin, pollingservice):
-        """ add pllingservice and then return plugin """
+    def insert_pollingservice(cls, plugin, pollingservice: dict):
+        """
+        This function inserts a pollingservice into a specific plugin.
+        It returns the updated plugin.
+        
+        """
         plugin.update({'polling service':pollingservice})
         return plugin
     
     @staticmethod
-    def create_dataplugin_template(name, version=None):
-        """ return the template validate"""
+    def create_dataplugin_template(name: str, version=None):
+        """ 
+        This function creates a dataplugin template and returns it.
+        
+        """
         plgn_template = components['dataplugins'].get_plugin_schema(name,\
                 version)
         print("dataplugin template", plgn_template)
         return plgn_template
     
     @staticmethod 
-    def create_transform_template(name, version=None):
-        """ return the template validate """
+    def create_transform_template(name: str, version=None):
+        """
+        This function creates a transform tempalte and returns it.
+        
+        """
         transform_template  = components['transforms'].get_plugin_schema(name,\
                 version)
         print("transform_template", transform_template)
         return transform_template
 
     @staticmethod
-    def create_tx_template(name, version=None):
-        """ return the template validate """
+    def create_tx_template(name: str, version=None):
+        """
+        This function creates a tx template and returns it.
+        
+        """
         tx_template  = components['tx'].get_plugin_schema(name, version)
         print("tx_template", tx_template)
         return tx_template
@@ -166,16 +189,19 @@ class DataPipeline(dict):
     @staticmethod
     def plugin_template(component_type, plugin_name):
         """ 
-        The (sub)component types are dataplugin, parser, transport, 
-        transform, tx, filters N.B. tranport, parsers are subcomponents 
-        
+        Creates a plugin template, returns it.
+
         """
         plgn = components[component_type].get_plugin(plugin_name)
         return plgn
 
     @staticmethod
     def get_schema(component_type, plugin_name, version='1.0.0'):
-        """ Get the schema for the relavent plugin name """
+        """ 
+        Get the schema for the relavent plugin name. Returns the schema
+        or error.
+
+        """
         manager = components[component_type]
         print("The manager is %s", manager, component_type, plugin_name)
         manager.load_schemas()
@@ -191,7 +217,8 @@ class DataPipeline(dict):
         This function is used to validate the new_schema (inputed dict) 
         and the template_schema (retrieved schema, using the get_schema
         function). This is a helper function whenever a schema needs to 
-        be validated.  
+        be validated.  Returns bool and error message if validation 
+        fails.
 
         """
         try:
@@ -208,7 +235,8 @@ class DataPipeline(dict):
         This function dumps the created config_dict to specified yaml
         file location.  Returns a conformation dictionary that states 
         the time the file was written, file size and the name of the 
-        file.  See client.cfg for example desired output.
+        file.  See client.cfg for example desired output. Returns error
+        if the output directory does not exist.
 
         """
         conformation_dict = {}
@@ -239,8 +267,10 @@ class DataPipeline(dict):
 
     def create_config_dict(self) -> dict:
         """ 
-        This function simply creates a final pipeline dictionary that 
+        This function creates a final pipeline dictionary that 
         will be dumped to a yaml file in the write_config() function.
+        Returns a dictionary unless there are no elements in any of the
+        lists, it returns an error message.
         
         """
         config_dict = {}
@@ -268,4 +298,3 @@ class DataPipeline(dict):
         """ Just initialize and return Pipeline object """
         pipeline  = DataPipeline()
         return pipeline
-
