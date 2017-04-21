@@ -2,7 +2,7 @@ import json
 import requests
 import base64
 import bson
-import gzip
+import zlib
 import sys
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -18,6 +18,8 @@ from factorytx import utils
 class RemoteDataPost(BaseTX):
 
     logname = 'RDP'
+    gzip_level = -1
+    gzip_wbits = 31
 
     def loadParameters(self, schema, conf):
         self.logname = ': '.join([self.logname, conf['source']])
@@ -110,14 +112,14 @@ class RemoteDataPost(BaseTX):
         # set password
         binarykey = hashlib.sha256(bytes(self.options['apikey'], 'utf-8')).digest()
         key = base64.urlsafe_b64encode(binarykey)
-        cipher_suite = Fernet(key)
-        encoded_text = cipher_suite.encrypt(bytes(data.getvalue()))
+        output = io.BytesIO()
+        with BinaryFernetFile(key).open(fileobj=output, mode='wb') as cipher:
+            cipher.write(data)
 
-        return encoded_text
+        return output.getvalue()
 
     @staticmethod
     def gzip_data(data):
-        out = BytesIO()
-        with gzip.GzipFile(fileobj=out, mode="wb") as f:
-            f.write(data)
+        compressor = zlib.compressobj(self.gzip_level, zlib.DEFLATED, self.gzip_wbits)
+        out = compressor.compress(data) + compressor.flush()
         return out
