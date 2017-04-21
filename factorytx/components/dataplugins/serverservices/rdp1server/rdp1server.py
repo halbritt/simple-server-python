@@ -30,7 +30,6 @@ class RDP1Server:
             print("Persisting the headers")
             headers = json.dumps(cherrypy.request.headers)
             f.write(headers)
-        cherrypy.response.status = 404
 
     def start_server(host, port, data_store):
         cherrypy.config.update({'server.socket_port': port, 'server.socket_host': host})
