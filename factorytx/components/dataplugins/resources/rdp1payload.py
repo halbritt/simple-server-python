@@ -1,10 +1,22 @@
+import os
+import json
+from pandas import DataFrame
 from factorytx.components.dataplugins.resource import Resource
 
 class RDP1Payload(Resource):
 
     def __init__(self, payload):
+        print("making an RDP payload from %s", payload)
+        data = payload['data'].split(':')
+        self.mtime = data[0]
         self.payload = payload
+        self.path = payload['path']
         self.name = self.encode('utf8')
+
+    def load_resource(self):
+        with open(os.path.join(self.path, self.payload['data']), 'rb') as f:
+            rawbody = json.loads(f.read())
+        return DataFrame(rawbody)
 
     @property
     def basename(self):

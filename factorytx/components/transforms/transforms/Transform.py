@@ -198,12 +198,15 @@ class TransformAbstract(object):
                 if not self.is_empty():
                     log.info("Getting Next Transform")
                     next_transform = self.get_next_transform()
-                    log.info("Transforming the data with id %s and resource %s", next_transform['frame_id'], next_transform['datasource'])
-                    log.info("The frame keys are %s", next_transform['frame'].keys())
-                    next_transform['frame'] = self.transform(next_transform['frame'], next_transform['datasource'])
-                    log.info("Pushing the Transform")
-                    self.push_transform(next_transform)
-                    log.info("done")
+                    if 'resource_id' in next_transform:
+                        self.push_transform(next_transform)
+                    else:
+                        log.info("Transforming the data with id %s and resource %s", next_transform['frame_id'], next_transform['datasource'])
+                        log.info("The frame keys are %s", next_transform['frame'].keys())
+                        next_transform['frame'] = self.transform(next_transform['frame'], next_transform['datasource'])
+                        log.info("Pushing the Transform")
+                        self.push_transform(next_transform)
+                        log.info("done")
             except Exception as e:
                 log.exception('Failed to read data from: %r', e)
                 self._connected = False

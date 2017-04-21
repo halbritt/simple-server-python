@@ -8,3 +8,6 @@ properties:
   port:
     type: integer
     default: 80
+  poll_rate:
+    type: integer
+    default: 5

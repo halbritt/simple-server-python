@@ -112,7 +112,7 @@ class TXAbstract(object):
                     log.info("Failed to TX the frame %s", frame_id)
                     passed_all = False
         if passed_all:
-            log.info("Sucessfuly TXed the frame %s with tx %s", frame_id)
+            log.info("Sucessfuly TXed the frame %s with tx", frame_id)
             confirm = self.remove_frame(frame_info['frame_path'])
             if confirm:
                 frame_info['confirmation'] = True

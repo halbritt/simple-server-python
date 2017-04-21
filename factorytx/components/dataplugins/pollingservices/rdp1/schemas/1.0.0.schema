@@ -6,6 +6,9 @@ properties:
     type: string
   version:
     type: string
+  data_store:
+    type: string
+    default: /var/spool/sightmachine/factorytx/completed/rdp1store
 required:
 - version
 - root_path

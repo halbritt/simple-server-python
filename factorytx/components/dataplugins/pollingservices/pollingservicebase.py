@@ -92,6 +92,7 @@ class PollingServiceBase(metaclass=ABCMeta):
         """ Loads a resource and returns a tuple of uid, resource_dict, resource_data.
             Hopefully resource_data will be an iterable/generator.
 
+
         """
         if uid in self.resources:
             resource = self.resources[uid]
@@ -140,7 +141,10 @@ class PollingServiceBase(metaclass=ABCMeta):
             resources.
 
         """
-        max_size = self.max_resource_size
+        if getattr(self, 'max_resource_size', []):
+            max_size = self.max_resource_size
+        else:
+            max_size = 0
         running_resources = []
         for resource in filtered_resources:
            chunks = self.chunk_resource(resource, max_size)
@@ -161,7 +165,7 @@ class PollingServiceBase(metaclass=ABCMeta):
             for processing.
         """
         unregistered = []
-        all_resources = self.get_all_resources()
+        all_resources = [x for x in self.get_all_resources()]
         self.log.info("The resources that are available number %s.", len(all_resources))
         for resource in self.get_all_resources():
             if not resource in self.resource_keys:
