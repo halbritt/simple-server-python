@@ -58,7 +58,7 @@ class ServerPlugin(DataPlugin):
         unprocessed, untxed = [], []
         registered = self.server.get_registered_resources()
         for resource in registered:
-            if not resource[0] in self.resource_dict:
+            if resource[0] not in self.resource_dict:
                 resource_id = resource[0]
                 self.log.info("The resource %s is not registered here.", resource)
                 arguments = resource[1].split(',')
