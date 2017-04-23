@@ -30,6 +30,9 @@ class RDP1Payload(Resource):
     def __eq__(self, other):
         return self.data_name == other.data_name
 
+    def __lt__(self, other):
+        return float(self.mtime) + hash(self.data_name) < float(other.mtime) + hash(other.data_name)
+
     def __hash__(self):
         return hash((self.data_name, self.poll_name, self.mtime, self.path))
 

@@ -304,10 +304,10 @@ class DataPluginAbstract(object):
                     self.log.error("The frame doesn't exist to be txed: %s.", frame_id)
 
 
-    def get_corresponding_chunks(self, resource):
-        log.debug("Trying to match the resource %s to its chunks", resource)
+    def get_corresponding_chunks(self, resource_id):
+        log.debug("Trying to match the resource %s to its chunks", resource_id)
         log.debug("The TX dict is %s.", [x for x in self.tx_dict.items()])
-        chunks = [(x, self.tx_dict[x]) for x in self.tx_dict if self.tx_dict[x]['resource_id'] == resource[0]]
+        chunks = [(x, self.tx_dict[x]) for x in self.tx_dict if self.tx_dict[x]['resource_id'] == resource_id]
         log.debug("The chunks are %s", chunks)
         return chunks
 
@@ -321,17 +321,16 @@ class DataPluginAbstract(object):
         unprocessed, untxed = [], []
         for poll in self.pollingservice_objs:
             registered = poll.get_registered_resources()
-            for resource in registered:
-                if not resource[0] in self.resource_dict:
-                    resource_id = resource[0]
-                    self.log.info("The resource %s is not registered here.", resource)
-                    arguments = resource[1].split(',')
+            for resource_id, resource_enc in registered:
+                if resource_id not in self.resource_dict:
+                    self.log.info("The resource %s is not registered here.", resource_id)
+                    arguments = resource_enc.split(',')
                     log.debug("The resource arguments are %s", arguments)
                     resource = poll.return_resource_class()(poll, *arguments)
                     unprocessed += [(resource_id, resource)]
                 else:
                     self.log.info("This resource %s has been previously processed and is persisted", resource)
-                    corresponding = self.get_corresponding_chunks(resource)
+                    corresponding = self.get_corresponding_chunks(resource_id)
                     untxed = self.filter_corresponding(corresponding)
                     transform = []
                     for frame_id, resource in untxed:
@@ -340,7 +339,7 @@ class DataPluginAbstract(object):
                             self.log.info("Found some transformation on the frame %s", frame_id)
                         else:
                             self.log.warn("Found evidence of processing for %s, but no reference in a TX module, reprocessing.", frame_id)
-                            transform += [(frame_id, resource)]
+                            transform += [(frame_id, (resource_id, resource_enc))]
                     untxed = transform
         self.log.info("Returning %s resources to be processed from the unprocessed function.", len(unprocessed))
         log.debug("The unprocessed entries are %s, %s", unprocessed, untxed)

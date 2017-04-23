@@ -65,8 +65,8 @@ class ServerPlugin(DataPlugin):
                 resource = self.server.return_resource_class()(*arguments)
                 unprocessed += [(resource_id, resource)]
             else:
-                self.log.info("This resource %s has been previously processed and is persisted", resource)
-                corresponding = self.get_corresponding_chunks(resource)
+                self.log.info("This resource %s has been previously processed and is persisted", resource_id)
+                corresponding = self.get_corresponding_chunks(resource_id)
                 untxed = self.filter_corresponding(corresponding)
                 transform = []
                 for frame_id, resource in untxed:
@@ -75,7 +75,7 @@ class ServerPlugin(DataPlugin):
                         self.log.info("Found some transformation on the frame %s", frame_id)
                     else:
                         self.log.warn("Found evidence of processing for %s, but no reference in a TX module, reprocessing.", frame_id)
-                        transform += [(frame_id, resource)]
+                        transform += [(frame_id, (resource_id, resource_enc))]
                 untxed = transform
         self.log.info("Returning %s resources to be processed from the unprocessed function.", len(unprocessed))
         self.log.debug("The unprocessed entries are %s, %s", unprocessed, untxed)
