@@ -9,6 +9,8 @@ class RDP1Payload(Resource):
         print("making an RDP payload from %s", payload)
         data = payload['data'].split(':')
         self.mtime = data[0]
+        self.data_name = payload['data']
+        self.poll_name = payload['poll']
         self.payload = payload
         self.path = payload['path']
         self.name = self.encode('utf8')
@@ -20,18 +22,16 @@ class RDP1Payload(Resource):
 
     @property
     def basename(self):
-        return "TODO nice basename string"
+        return self.name
 
     def encode(self, encoding):
-        return ','.join("something nice")
+        return ','.join([self.poll_name, self.data_name])
 
     def __eq__(self, other):
-        # TODO: Nice equal function for rdp payloads
-        return False
+        return self.data_name == other.data_name
 
     def __hash__(self):
-        # TODO: Nice hash function
-        return 0
+        return hash((self.data_name, self.poll_name, self.mtime, self.path))
 
     def __repr__(self):
-        return "TODO nice print string"
+        return "RDP1Payload: uploaded: %s, file_name: %s" % (self.mtime, self.path)

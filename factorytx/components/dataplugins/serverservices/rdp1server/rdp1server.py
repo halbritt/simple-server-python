@@ -5,6 +5,8 @@ import json
 
 class RDP1Server:
 
+    logname = "RDP1"
+
     def __init__(self, data_store):
         if not os.path.exists(data_store):
             print("The datastore is", data_store)
@@ -42,5 +44,5 @@ class RDP1Server:
         time_now = time.time()
         length = headers['Content-Length']
         key_name = headers['X-Sm-Api-Key']
-        final_name = ':'.join([str(time_now), length, key_name[:min(10, len(key_name))]])
+        final_name = ':'.join([str(time_now), length, key_name[:min(10, len(key_name))], '.' + self.logname])
         return final_name

@@ -37,14 +37,14 @@ class ServerPlugin(DataPlugin):
         self.log.info("Looking for files in the FileTransport object.")
         new_entries = self.server.poll()
         found_entries = []
+        self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
         for resource in new_entries:
             if resource[0][0] in self.resource_dict:
                 self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
                 continue
             self.log.debug("Processing the resource %s", resource)
             found_entries += [resource]
-        self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
-        self.log.info('Found %s registered entries.', found_entries)
+        self.log.info('Found %s entries registered by my server.', found_entries)
         file_entries.extend(new_entries)
 
         if len(file_entries) == 0:
@@ -63,7 +63,7 @@ class ServerPlugin(DataPlugin):
                 self.log.info("The resource %s is not registered here.", resource)
                 arguments = resource[1].split(',')
                 self.log.debug("The resource arguments are %s", arguments)
-                resource = self.server.return_resource_class()(poll, *arguments)
+                resource = self.server.return_resource_class()(*arguments)
                 unprocessed += [(resource_id, resource)]
             else:
                 self.log.info("This resource %s has been previously processed and is persisted", resource)

@@ -1,43 +1,82 @@
 import json
-import glob
-from os.path import isfile, join, getmtime
-import os
-import logging
-import time, sys, traceback
-import codecs
-import mimetypes
-import sys
-import uuid
-import io
-import xml.etree.ElementTree as ET
-import datetime
 import requests
+import base64
+import bson
+import zlib
+import sys
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+import hashlib
+from io import BytesIO
+from factorytx.components.tx.basetx import BaseTX
+from factorytx.managers.PluginManager import component_manager
+from factorytx.Global import setup_log
+from factorytx import utils
 
-import logging
-from FactoryTx.Global import setup_log
-from FactoryTx.components.tx.DataFilesPostManager import DataFilesPostManager
-# log = setup_log('RemoteDataPost')
 
-class RemoteDataPost(DataFilesPostManager):
+class RemoteDataPost(BaseTX):
 
-    def loadParameters(self, sdconfig, schema, config):
-        self.__dict__.update(config)
-        logname = 'RemoteDataPost'
-        if hasattr(self, 'source'):
-            logname = '{}-{}'.format(logname, self.source)
-        self.log = setup_log(logname)
+    logname = 'RDP'
+    gzip_level = -1
+    gzip_wbits = 31
 
-        for key, value in schema.get('properties', {}).iteritems():
-            if value.get('default', None) != None:
-                if (not hasattr(self, key)) or (hasattr(self, key) and getattr(self, key) == None):
-                    setattr(self, key, value.get('default'))
+    def loadParameters(self, schema, conf):
+        self.logname = ': '.join([self.logname, conf['source']])
+        conf['logname'] = self.logname
+        super(RemoteDataPost, self).loadParameters(schema, conf)
+        self.request_setup = self.setup_request()
 
-        self.root_dir = sdconfig.get('plugins', {}).get('data', None)
-        if self.path[0:1] == "/":
-            self.path = self.path[1:]
+    def TX(self, data):
+        self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
+        for x in data:
+            loaded = json.loads(x)
+            self.log.info("There is now some %s records to process", len(loaded))
+            loaded = self.format_sslogs(loaded)
+            self.log.info("Now we have formatted the sslogs for rdp transmission.")
+            payload = self.make_payload(loaded)
+            self.log.debug("Made the payload")
+            ship = self.send_http_request(payload)
+            self.log.info("Finished the TX: %s", ship)
+        return True
 
-        if config.has_key('path'):
-            self.databuffer = glob.os.path.abspath(config.get('path'))
+    def setup_request(self):
+        tenantname = self.options['tenantname']
+        req_session = requests.Session()
+        site_domain = self.options['sitedomain']
+        protocol = self.options['protocol']
+        hosturl = '{}://{}.{}'.format(protocol, tenantname, site_domain)
+        if self.options['use_encryption']:
+            rel_url = '/v1/rdp2/sslogs_test_encrypt'
+        else:
+            rel_url = '/v1/rdp2/sslogs_test_no_encrypt'
+        full_url = '{}{}'.format(hosturl, rel_url)
+        headers = {}
+        if self.options['apikeyalias']:
+            headers.update({'X-SM-API-Key-Alias': self.options['apikeyalias']})
+        else:
+            self.log.error("ERROR: apikeyalias is not specified")
+        encryption_key = self.options['apikey']
+        return {'session':req_session, 'url':full_url, 'headers':headers, 'key':encryption_key,
+                'host':hosturl, 'route':rel_url}
+
+    def send_http_request(self, payload):
+        self.log.info("Going to send the payload now")
+        cfg = self.options
+        setup = self.request_setup
+        if cfg['use_encryption']:
+            filetuple = ('p.tmp', payload)
+        else:
+            filetuple = ('p.tmp', payload, 'application/octet-stream', {'Transfer-Encoding': 'gzip'})
+        multipart_form_data = {'sslog': filetuple}
+        self.log.info("Going to put now with the setup", setup)
+        resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'])
+        self.log.info("Got the response %s", resp)
+        status_code = resp.status_code
+        if status_code < 200 or status_code >= 300:
+            self.log.info("Iteration) ERROR: Failed to retrieve response: code=%s, text=%s" % (status_code, resp.text))
+            result = {'code': status_code, 'text': resp.text}
+            sys.stdout.write("E")
         else:
             self.databuffer = glob.os.path.abspath(os.path.join(glob.os.path.abspath(self.root_dir), self.path))
 
@@ -113,125 +152,18 @@ class RemoteDataPost(DataFilesPostManager):
             file_data =  f.read()
         return (filename, file_data, binary_mime_type)
 
-    def _is_good_response(self, resp):
-        if resp.status_code == 415:
-            return False
-        resp.raise_for_status()
-        return self.validateFilePostResponse(resp)
+    def encode_data(self, data):
+        # set password
+        binarykey = hashlib.sha256(bytes(self.options['apikey'], 'utf-8')).digest()
+        key = base64.urlsafe_b64encode(binarykey)
+        output = io.BytesIO()
+        with BinaryFernetFile(key).open(fileobj=output, mode='wb') as cipher:
+            cipher.write(data)
 
-    def post_json_files(self):
-        # create the databuffer if it doesn't exists, make setup easier
-        try:
-            if not os.path.exists(self.databuffer):
-                os.makedirs(self.databuffer)
-        except Exception:
-            self.log.exception('Failed to create databuffer folder!')
-            return
+        return output.getvalue()
 
-        files = self.load_files(folder=self.databuffer, extensions=[self.fname_filter], reload_files=self.reload_files)
-        if not files:
-            return
-
-        self.log.info("There are {} files to process".format(len(files)))
-
-        for cur_file in files: # Iterate over each metadata json file
-
-            json_dict = self.read_json_file(cur_file)
-            if not json_dict:
-                self.handle_file_onerror(cur_file)
-                continue
-
-            isBinary, json_data = self.isBinaryPost(json_dict)
-
-            if json_data != None and isBinary == True: # We are processing a binary file
-                filename = json_data.get('filename', None)
-                filepath = os.path.join(self.databuffer, filename)
-                json_data['extension'] = os.path.splitext(filepath)[1]
-                json_data['SDposttimestamp'] = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')
-
-                try:
-                    binary_file_tuple = self.prepare_binary_file_post_args(filename, filepath)
-                except:
-                    time.sleep(0.1)
-                    self.log.error("ERROR! Unable to find matching binary file {}".format(filepath)) # The edge case someone is saving binary files with the same filename could overwrite binary data
-                    self.handle_file_onerror(cur_file) # Remove the pointer to the duplicate binary that is left in the folder
-                    continue
-
-                json_tuple = ('metadata', json.dumps(json_data), 'application/json')
-                self.log.info("POSTING {}".format(filepath))
-
-                headers = {}
-                if self.apikey: headers = {'X-SM-API-Key': self.apikey}
-                resp = self.submitData(**{'files':{ 'ipcfile': binary_file_tuple, 'metadata': json_tuple }, 'headers':headers})
-
-                self.log.info("Binary file upload response: HTTP %s, %s",
-                              resp.status_code, resp.text)
-
-                if self._is_good_response(resp):
-                    try:
-                        jsonresp = json.loads(resp.text)
-                    except:
-                        self.log.error(resp.text)
-                        self.handle_file_onerror(cur_file)
-                        continue
-
-                    # Comment out imagefilesize checking for now
-                    #remove = True if 'imagefilesize' not in jsonresp else origfilesize == jsonresp['imagefilesize']
-                    remove = True
-                    if remove:
-                        self.handle_file_onsuccess(cur_file)
-                        self.handle_file_onsuccess(filepath)
-                        self.log.info("REMOVED {}".format(cur_file))
-                        self.log.info("REMOVED {}".format(filepath))
-                else:
-                    self.handle_file_onerror(cur_file)
-                    self.handle_file_onerror(filepath)
-
-            else: # We are processing a strictly json file (ex. PLC)
-                json_data = json_dict # Just to conform to the previous name
-                headers = {'Content-Type': 'application/json'}
-                if self.apikey: headers['X-SM-API-Key'] = self.apikey
-
-                resp = self.submitData(**{'data':json_data, 'headers':headers, 'timeout':self.timeout})
-                self.log.info('JSON file upload response: HTTP %s, %s',
-                              resp.status_code, resp.text)
-
-                if self._is_good_response(resp):
-                    self.handle_file_onsuccess(cur_file)
-                    self.log.info("REMOVED {}".format(cur_file))
-                else:
-                    self.handle_file_onerror(cur_file)
-
-        self.reload_files = False
-
-
-    def PostData(self):
-        self.log.info('Starting remote data post to control node')
-        self.is_shutdown = False
-        self.poll = True
-        while self.poll:
-            try:
-                self.PostDataHelper()
-                time.sleep(1)
-            except Exception as e:
-                if self.do_shutdown:
-                    self.log.error('RemoteDataPost encountered an error while uploading, but has been instructed to shutdown')
-                    self.is_shutdown = True
-                    return
-                self.reload_files = True
-                self.log.error(e)
-                self.log.error('RemoteDataPost Error while uploading files to remote server.  Waiting 5 seconds before retry')
-                time.sleep(5)
-                self.log.info('RemoteDataPost: Attempting to resume posting')
-
-        # if we got here, we are shutdown
-        self.is_shutdown = True
-
-    def StopPosting(self):
-        self.log.info('RemoteDataPost beginning shutdown...')
-        self.poll = False
-        self.do_shutdown = True
-        while not self.is_shutdown:
-            self.log.info('RemoteDataPost waiting for posting processes to complete')
-            time.sleep(2)
-        self.log.info('RemoteDataPost shutdown complete')
+    @staticmethod
+    def gzip_data(data):
+        compressor = zlib.compressobj(self.gzip_level, zlib.DEFLATED, self.gzip_wbits)
+        out = compressor.compress(data) + compressor.flush()
+        return out

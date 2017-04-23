@@ -35,7 +35,7 @@ class RDP1(PollingServiceBase):
                 if fle.endswith('headers'): continue
                 header_name = fle + 'headers'
                 if header_name in filename:
-                    resource = {'headers':header_name, 'data':fle, 'path': self.data_store}
+                    resource = {'headers':header_name, 'data':fle, 'path': self.data_store, 'poll': self.logname}
                     resource = RDP1Payload(resource)
                     new_resources.append(resource)
         return new_resources
