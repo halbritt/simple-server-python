@@ -25,6 +25,7 @@ simpleeval
 six
 watchdog
 SQLAlchemy
+cherrypy
 # Plugin Requirements
 cherrypy
 freeopcua

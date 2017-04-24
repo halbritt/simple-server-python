@@ -28,9 +28,6 @@ except:
 
 log = logging.getLogger(__name__)
 
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
-
 class TXAbstract(object):
     """
     TX is a framework for building transformations that can handle
@@ -70,8 +67,11 @@ class TXAbstract(object):
             os.mkdir(self.tx_persistence_location)
         self.tx_ref = shelve.open(os.path.join(self.tx_dict_location, self.tx_dict_name))
         for tx_cfg in self.tx:
-            self.log.debug("Loading the TX configuration %s", tx_cfg)
+            self.log.info("Loading the TX configuration %s", tx_cfg)
+            if not 'log_level' in tx_cfg['config']:
+                tx_cfg['config']['log_level'] = self.log_level
             tx_obj = self._load_plugin(tx_manager, tx_cfg)
+            self.log.debug("The tx options are", tx_obj.options)
             self.tx_objs.append(tx_obj)
 
     def populate_out(self) -> ():
@@ -91,7 +91,7 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> ():
+    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
@@ -107,12 +107,12 @@ class TXAbstract(object):
                 log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
                 confirmation = tx.TX(dataframe)
                 if confirmation:
-                    log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx.__name__)
+                    log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
                 else:
                     log.info("Failed to TX the frame %s", frame_id)
                     passed_all = False
         if passed_all:
-            log.info("Sucessfuly TXed the frame %s with tx", frame_id)
+            log.info("Sucessfuly TXed the frame %s with all txes", frame_id)
             confirm = self.remove_frame(frame_info['frame_path'])
             if confirm:
                 frame_info['confirmation'] = True
@@ -124,6 +124,8 @@ class TXAbstract(object):
                 log.error("Couldn't remove the path from the frame %s", frame_info)
             else:
                 log.warn("The frame %s doesn't seem to be persisted in TX", frame_id)
+            return True
+        return False
 
     def remove_frame(self, frame_path: str) -> utils.status_var:
         """ Given the FRAME_PATH to a saved dataframe, returns True exactly when the
@@ -157,45 +159,6 @@ class TXAbstract(object):
         self.out_pipe[frame_id] = False
         log.info("Persisted the frame and registered it with my references")
         log.info("The out is %s", vars(self.out_pipe))
-
-
-    def encrypt(self, dataframe: pd.DataFrame):
-        """ Given a DATAFRAME, encrypt it into the right format. """
-        gm = global_manager
-        if not gm.get_encryption():
-            return records
-
-        (encryption_public_key,
-         encryption_padding,
-         sha1_digest) = gm.get_encryption()
-
-        symmetric_key = Fernet.generate_key()
-        encrypter = Fernet(symmetric_key)
-        encrypted_key = encryption_public_key.encrypt(
-                        symmetric_key,
-                        encryption_padding)
-
-        exclude_keys = ["source", "timestamp", "counter", "poll_rate"]
-        for ts, data in records.items():
-            enc_data = {}
-            enc_fields = []
-
-            for k, v in data.items():
-                if k in exclude_keys:
-                    enc_data[k] = v
-                else:
-                    enc_data[k] = encrypter.encrypt(json.dumps(v))
-                    enc_fields.append(k)
-
-            enc_data['encryption'] = dict(
-                key=base64.b64encode(encrypted_key),
-                fields=enc_fields,
-                pubkey_sha1=sha1_digest,
-                encoding="field-encrypt-v1"
-            )
-
-            records[ts] = enc_data
-        return records
 
     @property
     def connected(self):
@@ -275,8 +238,15 @@ class TXAbstract(object):
                     res = self.get_next_tx()
                     log.info("The first tx arg is %s", res['frame_id'])
                     log.info("TXing the data")
-                    self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
-                    log.info("done")
+                    tx_done = False
+                    while not tx_done:
+                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
+                        if not tx_status:
+                            log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
+                        else:
+                            log.info("Sucessfully TXed the frame %s.", res['frame_id'])
+                            tx_done = True
+                    log.info("Moving on to a new TX")
             except Exception as e:
                 log.exception('Failed to read data from: %r', e)
                 self._connected = False

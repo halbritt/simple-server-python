@@ -52,10 +52,10 @@ class RemoteDataPost(BaseTX):
             rel_url = '/v1/rdp2/sslogs_test_no_encrypt'
         full_url = '{}{}'.format(hosturl, rel_url)
         headers = {}
-        if self.options['apikeyalias']:
-            headers.update({'X-SM-API-Key-Alias': self.options['apikeyalias']})
+        if self.options['apikeyid']:
+            headers.update({'X-SM-API-Key-ID': self.options['apikeyid']})
         else:
-            self.log.error("ERROR: apikeyalias is not specified")
+            self.log.error("ERROR: apikeyid is not specified")
         encryption_key = self.options['apikey']
         return {'session':req_session, 'url':full_url, 'headers':headers, 'key':encryption_key,
                 'host':hosturl, 'route':rel_url}
@@ -78,79 +78,35 @@ class RemoteDataPost(BaseTX):
             result = {'code': status_code, 'text': resp.text}
             sys.stdout.write("E")
         else:
-            self.databuffer = glob.os.path.abspath(os.path.join(glob.os.path.abspath(self.root_dir), self.path))
-
-        self.urlpath = self.url
-        self.do_shutdown = False
-        self.is_shutdown = False
-        self.url = str(self.protocol) + "://" + str(self.host) + ":" + str(self.port) + str(self.urlpath)
-        self.reload_files = False
-
-    def PostDataHelper(self):
-        self.post_json_files()
-
-    def validateFilePostResponse(self, resp):
-        if not resp:
-            return False
-        response = resp.text
-        #####################################################
-        ## According to Ryan 2/5/2015
-        ## Put back old logic as well
-        #####################################################
-        skipJSONCheck = False
-
-        # OLD LOGIC BELOW
-        try:
-            if len(response) == 26: #if valid mongo ID response (24 length plus quotations", delete original JSON
-                skipJSONCheck=True
-        except:
-            pass
-        # END OLD LOGIC
-
-        # NEW LOGIC
-        if not skipJSONCheck:
             try:
-                jsonresp = json.loads(response)
-                sslogid = jsonresp.get('last_valid_id', None) or jsonresp.get('last_reject_id', None) \
-                          or jsonresp.get('id', None) # This last OR is for backwards compatibility
-                if len(sslogid) > 0: #if valid mongo ID response, delete original JSON
-                    skipJSONCheck = True
-            except:
-                pass
-        # END NEW LOGIC
-        #####################################################
-        return skipJSONCheck
+                resp = json.loads(resp.text)
+                result = {'code': status_code, 'summary': resp, 'size': len(payload)}
+                sys.stdout.write(".")
+                # self.log.info("Iteration %d) SUCCESS: %s" % (iterCnt, resp))
+            except Exception as e:
+                # self.log.info("Iteration %d) ERROR: Failed to parse initial batch response" % iterCnt)
+                result = {'code': status_code, 'parse_failed': True}
+                sys.stdout.write("E")
+        return result
 
-    def postfunc(self, data=None, files=None, headers=None, timeout=10):
-        if files:
-            resp = requests.post(self.url, files=files, headers=headers, timeout=timeout, verify=self.sslverify)
+    def format_sslogs(self, bson_content):
+        sslogs = [x[1] for x in sorted(bson_content.items(), key=lambda y: y[0])]
+        bson_arr = []
+        for sslog in sslogs:
+            bson_sslog = bson.BSON.encode(sslog)
+            bson_arr.append(bson_sslog)
+        bson_out = b''.join(bson_arr)
+        return bson_out
+
+    def make_payload(self, sslogs):
+        gzip_out = self.gzip_data(sslogs)
+
+        if self.options['use_encryption']:
+            encode_out = self.encode_data(gzip_out)
         else:
-            self.log.info("posting {} with verify = {}".format(self.url, self.sslverify)) 
-            resp = requests.post(self.url, json=data, headers=headers, timeout=timeout, verify=self.sslverify)
-        return resp
+            encode_out = bytes(gzip_out.getvalue())
 
-
-    def isBinaryPost(self, json_dict):
-        isBinary= False
-        json_data = None
-        if json_dict.get('isBinary', None) == True:
-            isBinary = True
-            json_data = json_dict
-        try: # XML files and PLC created files have the data in a dictionary with the timestamp as the key
-            if json_dict[json_dict.keys()[0]].get('isBinary', None) == True:
-                isBinary = True
-                json_data = json_dict[json_dict.keys()[0]]
-        except Exception as e:
-                pass
-
-        if not isBinary: json_data = json_dict
-        return isBinary, json_data
-
-    def prepare_binary_file_post_args(self, filename, filepath):
-        binary_mime_type = mimetypes.guess_type(filepath)[0] or 'application/octet-stream'
-        with open(filepath, 'rb') as f:
-            file_data =  f.read()
-        return (filename, file_data, binary_mime_type)
+        return encode_out
 
     def encode_data(self, data):
         # set password
