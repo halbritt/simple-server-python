@@ -1,5 +1,6 @@
 import json
 import io
+import time
 import requests
 import base64
 import bson
@@ -47,6 +48,7 @@ class RemoteDataPost(BaseTX):
                     self.log.info("Failed to tx the data because of a status code %s from the server.",
                                   ship['code'])
                     self.log.info('Will retry shipping the payload again.')
+                    time.sleep(5)
                 else:
                     self.log.info("Finished the TX: %s", ship)
                     txed = True
