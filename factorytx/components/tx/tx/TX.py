@@ -91,7 +91,7 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> ():
+    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
@@ -124,6 +124,8 @@ class TXAbstract(object):
                 log.error("Couldn't remove the path from the frame %s", frame_info)
             else:
                 log.warn("The frame %s doesn't seem to be persisted in TX", frame_id)
+            return True
+        return False
 
     def remove_frame(self, frame_path: str) -> utils.status_var:
         """ Given the FRAME_PATH to a saved dataframe, returns True exactly when the
@@ -236,8 +238,15 @@ class TXAbstract(object):
                     res = self.get_next_tx()
                     log.info("The first tx arg is %s", res['frame_id'])
                     log.info("TXing the data")
-                    self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
-                    log.info("done")
+                    tx_done = False
+                    while not tx_done:
+                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
+                        if not tx_status:
+                            log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
+                        else:
+                            log.info("Sucessfully TXed the frame %s.", res['frame_id'])
+                            tx_done = True
+                    log.info("Moving on to a new TX")
             except Exception as e:
                 log.exception('Failed to read data from: %r', e)
                 self._connected = False

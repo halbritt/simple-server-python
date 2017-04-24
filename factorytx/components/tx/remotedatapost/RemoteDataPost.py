@@ -52,10 +52,10 @@ class RemoteDataPost(BaseTX):
             rel_url = '/v1/rdp2/sslogs_test_no_encrypt'
         full_url = '{}{}'.format(hosturl, rel_url)
         headers = {}
-        if self.options['apikeyalias']:
-            headers.update({'X-SM-API-Key-Alias': self.options['apikeyalias']})
+        if self.options['apikeyid']:
+            headers.update({'X-SM-API-Key-ID': self.options['apikeyid']})
         else:
-            self.log.error("ERROR: apikeyalias is not specified")
+            self.log.error("ERROR: apikeyid is not specified")
         encryption_key = self.options['apikey']
         return {'session':req_session, 'url':full_url, 'headers':headers, 'key':encryption_key,
                 'host':hosturl, 'route':rel_url}
