@@ -329,7 +329,7 @@ class DataPluginAbstract(object):
                     resource = poll.return_resource_class()(poll, *arguments)
                     unprocessed += [(resource_id, resource)]
                 else:
-                    self.log.info("This resource %s has been previously processed and is persisted", resource)
+                    self.log.info("This resource %s has been previously processed and is persisted", resource_id)
                     corresponding = self.get_corresponding_chunks(resource_id)
                     untxed = self.filter_corresponding(corresponding)
                     transform = []

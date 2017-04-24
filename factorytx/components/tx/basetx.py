@@ -8,14 +8,14 @@ import filecmp
 import pandas as pd
 import pytz
 from logging import getLogger
-
-from factorytx.Global import setup_log
 from factorytx.utils import merge_schema_defaults, status_var
 from dateutil import parser
 from datetime import datetime
 
 
 class BaseTX(object):
+
+    logname = "BaseTX"
 
     def loadParameters(self, schema, plgn_cfg):
         print("The configuration for this tx is %s", plgn_cfg)
@@ -30,8 +30,8 @@ class BaseTX(object):
             self.data_reference[data['name']] = data
 
     def setup_log(self):
-        print(vars(self))
-        self.log = setup_log(self.options['type'] + ": " + self.options['logname'], self.options['log_level'])
+        print("Setting up the TX log")
+        self.log = getLogger(self.options['type'] + ": " + self.options['logname'])
 
     def TX(self, data) -> status_var:
         """ txes the DATA, an encrypted dataframe, using my particular TX method. """
