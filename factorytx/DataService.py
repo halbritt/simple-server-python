@@ -96,10 +96,11 @@ class DataService(object):
             self.pipe = pipes[0]
 
     def _load_plugin(self, manager, cfg):
-        cfg['config'].update({'source': self.name})
-        obj = manager.get_plugin(cfg['type'])()
-        schema = manager.get_plugin_schema(cfg['type'], cfg['config']['version'])
-        obj.loadParameters(schema, cfg['config'])
+        if 'config' in cfg:
+            cfg['config'].update({'source': self.name})
+            obj = manager.get_plugin(cfg['type'])()
+            schema = manager.get_plugin_schema(cfg['type'], cfg['config']['version'])
+            obj.loadParameters(schema, cfg['config'])
         return obj
 
     def loadParameters(self, sdconfig, schema, conf):

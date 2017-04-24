@@ -27,6 +27,7 @@ watchdog
 SQLAlchemy
 cherrypy
 # Plugin Requirements
+cherrypy
 freeopcua
 ftputil
 futures

@@ -1,9 +1,12 @@
 import json
+import io
+import time
 import requests
 import base64
 import bson
 import zlib
 import sys
+from logging import getLogger
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -11,8 +14,8 @@ import hashlib
 from io import BytesIO
 from factorytx.components.tx.basetx import BaseTX
 from factorytx.managers.PluginManager import component_manager
-from factorytx.Global import setup_log
 from factorytx import utils
+from factorytx.components.tx.binary_fernet import BinaryFernetFile
 
 
 class RemoteDataPost(BaseTX):
@@ -23,6 +26,7 @@ class RemoteDataPost(BaseTX):
 
     def loadParameters(self, schema, conf):
         self.logname = ': '.join([self.logname, conf['source']])
+        self.log = getLogger(self.logname)
         conf['logname'] = self.logname
         super(RemoteDataPost, self).loadParameters(schema, conf)
         self.request_setup = self.setup_request()
@@ -36,8 +40,18 @@ class RemoteDataPost(BaseTX):
             self.log.info("Now we have formatted the sslogs for rdp transmission.")
             payload = self.make_payload(loaded)
             self.log.debug("Made the payload")
-            ship = self.send_http_request(payload)
-            self.log.info("Finished the TX: %s", ship)
+            txed = False
+            while not txed:
+                self.log.info("Submitting a payload")
+                ship = self.send_http_request(payload)
+                if ship['code'] < 200 or ship['code'] >= 300:
+                    self.log.info("Failed to tx the data because of a status code %s from the server.",
+                                  ship['code'])
+                    self.log.info('Will retry shipping the payload again.')
+                    time.sleep(5)
+                else:
+                    self.log.info("Finished the TX: %s", ship)
+                    txed = True
         return True
 
     def setup_request(self):
@@ -69,22 +83,33 @@ class RemoteDataPost(BaseTX):
         else:
             filetuple = ('p.tmp', payload, 'application/octet-stream', {'Transfer-Encoding': 'gzip'})
         multipart_form_data = {'sslog': filetuple}
-        self.log.info("Going to put now with the setup", setup)
-        resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'])
+        self.log.debug("Going to put now with the setup %s", setup)
+        try:
+            resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'])
+            status_code = resp.status_code
+        except Exception as e:
+            self.log.error("Failed to perform the put with the setup %s", setup)
+            self.log.error("The exception is %s", e)
+            status_code = -1
+            resp = False
         self.log.info("Got the response %s", resp)
-        status_code = resp.status_code
         if status_code < 200 or status_code >= 300:
-            self.log.info("Iteration) ERROR: Failed to retrieve response: code=%s, text=%s" % (status_code, resp.text))
-            result = {'code': status_code, 'text': resp.text}
+            self.log.info("Iteration) ERROR: Failed to retrieve response: code=%s" % status_code)
+            try:
+                result = {'code': status_code, 'text': resp.text}
+            except AttributeError as e:
+                result = {'code': status_code, 'text': None}
+                self.log.error("There was a failure because there was no body to the response.")
+                self.log.error("The missing is %s", e)
             sys.stdout.write("E")
         else:
             try:
                 resp = json.loads(resp.text)
                 result = {'code': status_code, 'summary': resp, 'size': len(payload)}
                 sys.stdout.write(".")
-                # self.log.info("Iteration %d) SUCCESS: %s" % (iterCnt, resp))
+                self.log.info("Iteration) SUCCESS: %s" % (resp))
             except Exception as e:
-                # self.log.info("Iteration %d) ERROR: Failed to parse initial batch response" % iterCnt)
+                self.log.info("Iteration) ERROR: Failed to parse initial batch response")
                 result = {'code': status_code, 'parse_failed': True}
                 sys.stdout.write("E")
         return result
@@ -118,8 +143,8 @@ class RemoteDataPost(BaseTX):
 
         return output.getvalue()
 
-    @staticmethod
-    def gzip_data(data):
-        compressor = zlib.compressobj(self.gzip_level, zlib.DEFLATED, self.gzip_wbits)
+    @classmethod
+    def gzip_data(cls, data):
+        compressor = zlib.compressobj(cls.gzip_level, zlib.DEFLATED, cls.gzip_wbits)
         out = compressor.compress(data) + compressor.flush()
         return out

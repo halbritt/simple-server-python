@@ -48,3 +48,20 @@ services:
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - receive-log-data-volume:/var/log/sightmachine/factorytx/
             - pip-cache:/root/.cache/pip/
+
+    simpledata:
+        container_name: simpledata
+        image: sightmachine/simpledata
+        hostname: simpledata
+        networks:
+            - factorytx-net
+        build:
+            context: ../SimpleData/
+            dockerfile: Dockerfile
+        stdin_open: true
+        command: /bin/bash
+        working_dir: /opt/sightmachine/simpledata
+        volumes:
+            - /opt/sightmachine/simpledata/plugins/conf.d:/opt/sightmachine/simpledata/plugins/conf.d
+            - /opt/sightmachine/simpledata:/opt/sightmachine/simpledata
+            - /opt/sightmachine/databuffer:/var/spool/sightmachine/simpledata/

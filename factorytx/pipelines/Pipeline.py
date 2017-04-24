@@ -2,21 +2,15 @@ import logging
 import yaml
 import os
 from jsonschema import validate
-from FactoryTx.managers.GlobalManager import global_manager
-from FactoryTx.managers.PluginManager import component_manager
-from FactoryTx.Global import setup_log
-from FactoryTx import utils
+from factorytx.managers.PluginManager import component_manager
+from factorytx import utils
 
-global_manager = global_manager()
 try:
     import ujson as json
 except:
     import json
 
 log = logging.getLogger(__name__)
-
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
 
 components = component_manager()
 
@@ -103,15 +97,61 @@ class DataPipeline(dict):
             some helpful error message if there is a problem
         """
         conformation_dict = {}
-        # config_file = yaml.dump(config_dict, yaml_file)
-        directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d'
-        out_file = os.path.join(directory, "test.cfg")
-        print(out_file)
-        if not os.path.exists(out_file):
-            os.makedirs(out_file)
-        object_file = open(out_file, 'w')
-        object_file.write(config_file)
-        object_file.close()
+        isfile = False
+        try:
+            # Currently if the file doesn't exist you get the error, so I'm adding the new object
+            # write
+            if os.path.isfile(output_directory):
+                isfile = True
+                object_file = open(output_directory, "w")
+                # Lines can be 120 characters long ................................................>|
+                object_file.write(yaml.dump(config_dict, indent=2, default_flow_style=False))
+                object_file.close()
+            else:
+                if os.path.exists(output_directory):
+                    print("Error: The output path %s doesn't appear to be a file.", output_directory)
+                else:
+                    log.info("Writing a new object_file to", output_directory)
+                    with open(output_directory, "w") as object_file:
+                        object_file.write(yaml.dump(config_dict, indent=2, default_flow_style=False))
+        except IOError as e:
+            print ("Error: File", output_directory,\
+                    "does not appear to exist")
+
+        if isfile:
+            conformation_dict['Time written'] = \
+                    time.ctime(os.path.getmtime(output_directory))
+            conformation_dict['File size in bytes'] = \
+                    os.path.getsize(output_directory)
+            conformation_dict['Name of config file'] = \
+                    output_directory.split('/').pop()
+            print(conformation_dict)
+            return conformation_dict
+
+    def create_config_dict(self) -> dict:
+        """
+        This function simply creates a final pipeline dictionary that 
+        will be dumped to a yaml file in the write_config() function.
+
+        """
+        config_dict = {}
+        config_dict['pipeline'] = []
+        dataplugins = {}
+        dataplugins['dataplugins'] = self.dataplugins
+        transforms = {}
+        transforms['transforms'] = self.transforms
+        tx = {}
+        tx['tx'] = self.tx
+        if len(self.dataplugins) > 0:
+            config_dict['pipeline'].append(dataplugins)
+        if len(self.transforms) > 0:
+            config_dict['pipeline'].append(transforms)
+        if len(self.tx) > 0:
+            config_dict['pipeline'].append(tx)
+        if len(config_dict) == 0:
+            return ("There is nothing in the configuration dictionary")
+        else:
+            return config_dict
 
     @staticmethod
     def create_config_file():

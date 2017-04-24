@@ -50,6 +50,8 @@ class PollingServiceBase(metaclass=ABCMeta):
 
     def setup_log(self, logname):
         log.debug("My params are %s.", vars(self))
+        if not getattr(self, 'plugin_type', []):
+            self.plugin_type = self.protocol
         self.log = logging.getLogger(self.plugin_type + ': ' + logname)
 
     def loadParameters(self, schema, conf):
@@ -58,6 +60,9 @@ class PollingServiceBase(metaclass=ABCMeta):
         self.__dict__.update(conf)
         merge_schema_defaults(schema, self.__dict__)
         log.info(self.resource_dict_location)
+        print("The name config is", conf, vars(self))
+        if not 'name' in conf:
+            conf['name'] = str(uuid4())[:8]
         resource_path = os.path.join(self.resource_dict_location, conf['name'])
         self.resources = shelve.open(resource_path + "resource-reference")
         self.resource_keys = shelve.open(resource_path +'resource-keys')
@@ -86,6 +91,7 @@ class PollingServiceBase(metaclass=ABCMeta):
     def load_resource_data(self, uid):
         """ Loads a resource and returns a tuple of uid, resource_dict, resource_data.
             Hopefully resource_data will be an iterable/generator.
+
 
         """
         if uid in self.resources:
@@ -135,7 +141,10 @@ class PollingServiceBase(metaclass=ABCMeta):
             resources.
 
         """
-        max_size = self.max_resource_size
+        if getattr(self, 'max_resource_size', []):
+            max_size = self.max_resource_size
+        else:
+            max_size = 0
         running_resources = []
         for resource in filtered_resources:
            chunks = self.chunk_resource(resource, max_size)
@@ -156,7 +165,7 @@ class PollingServiceBase(metaclass=ABCMeta):
             for processing.
         """
         unregistered = []
-        all_resources = self.get_all_resources()
+        all_resources = [x for x in self.get_all_resources()]
         self.log.info("The resources that are available number %s.", len(all_resources))
         for resource in self.get_all_resources():
             if not resource in self.resource_keys:
