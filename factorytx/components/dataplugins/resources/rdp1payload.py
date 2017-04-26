@@ -25,10 +25,12 @@ class RDP1Payload(Resource):
         return self.name
 
     def encode(self, encoding):
-        return ','.join([self.poll_name, self.data_name])
+        return self.data_name
 
     def __eq__(self, other):
-        return self.data_name == other.data_name
+        return self.data_name == other.data_name and \
+               self.mtime == other.mtime and \
+               self.data_name == other.data_name
 
     def __lt__(self, other):
         return float(self.mtime) + hash(self.data_name) < float(other.mtime) + hash(other.data_name)
@@ -37,4 +39,4 @@ class RDP1Payload(Resource):
         return hash((self.data_name, self.poll_name, self.mtime, self.path))
 
     def __repr__(self):
-        return "RDP1Payload: uploaded: %s, file_name: %s" % (self.mtime, self.path)
+        return "{RDP1Payload: uploaded: %s, file_name: %s}" % (self.mtime, self.path)

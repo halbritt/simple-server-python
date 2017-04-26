@@ -19,6 +19,7 @@ pyasn1
 pycparser
 pymongo
 requests
+routes
 rfc5424syslog
 semantic-version
 simpleeval

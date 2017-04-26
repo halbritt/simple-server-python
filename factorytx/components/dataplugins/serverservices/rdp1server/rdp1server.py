@@ -21,6 +21,11 @@ class RDP1Server:
     def upload(self):
         print("Uploading the payload %s", cherrypy.request.headers)
         key_name = cherrypy.request.headers["X-Sm-Api-Key"]
+        print("The api keys I know are %s", self.apikeys)
+        if key_name not in self.apikeys:
+            cherrypy.request.status = 400
+            print("The request doesn't have a proper API key configured")
+            return
         cl = cherrypy.request.headers['Content-Length']
         file_name = self.generate_name(cherrypy.request.headers)
         rawbody = cherrypy.request.body.read(int(cl))
@@ -33,10 +38,13 @@ class RDP1Server:
             headers = json.dumps(cherrypy.request.headers)
             f.write(headers)
 
-    def start_server(host, port, data_store):
-        cherrypy.config.update({'server.socket_port': port, 'server.socket_host': host})
+    def start_server(host, port, data_store, apikeys):
         server = RDP1Server(data_store)
-        cherrypy.tree.mount(server, "")
+        server.apikeys = apikeys
+        dispatch = cherrypy.dispatch.RoutesDispatcher()
+        dispatch.connect('sslog_upload', '/rlog/sslogger', controller=server, action='upload')
+        cherrypy.config.update({'server.socket_port': port, 'server.socket_host': host})
+        cherrypy.tree.mount(server, "/", {'/': {'request.dispatch': dispatch}})
         cherrypy.engine.start()
         return server
 

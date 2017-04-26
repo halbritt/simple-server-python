@@ -28,6 +28,7 @@ class RDP1(PollingServiceBase):
 
     def get_all_resources(self):
         new_resources = []
+        print("The resource keys are", [x for x in self.resource_keys.keys()])
         for dirs, paths, filename in os.walk(self.data_store):
             if paths: continue
             print("Found the entry %s", dirs, paths, filename)
@@ -37,6 +38,8 @@ class RDP1(PollingServiceBase):
                 if header_name in filename:
                     resource = {'headers':header_name, 'data':fle, 'path': self.data_store, 'poll': self.logname}
                     resource = RDP1Payload(resource)
+                    if resource.name in self.resource_keys:
+                        continue
                     new_resources.append(resource)
         return new_resources
 
@@ -51,4 +54,4 @@ class RDP1(PollingServiceBase):
 
     def start(self):
         print("Do the right thing to start the server here")
-        self.server = RDP1Server.start_server(self.host, self.port, self.data_store)
+        self.server = RDP1Server.start_server(self.host, self.port, self.data_store, self.apikeys)

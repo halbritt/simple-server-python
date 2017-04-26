@@ -64,8 +64,10 @@ class PollingServiceBase(metaclass=ABCMeta):
         if not 'name' in conf:
             conf['name'] = str(uuid4())[:8]
         resource_path = os.path.join(self.resource_dict_location, conf['name'])
+        print("Creating the resource dictionaries")
         self.resources = shelve.open(resource_path + "resource-reference")
         self.resource_keys = shelve.open(resource_path +'resource-keys')
+        print("The resource keys are %s", [x for x in self.resource_keys.keys()])
         self.datasource_keys = shelve.open(resource_path + "datasource-keys")
         self.last_registered = None
 
@@ -74,6 +76,9 @@ class PollingServiceBase(metaclass=ABCMeta):
             FOR THE RESOURCE. """
         # TODO: URL type identifier for a resource, not just random string
         uid = str(uuid4())
+        print("Registering %s, with name %s", resource, resource.name)
+        print("The resource dictionary is %s", self.resources)
+        print("The resource keys are", self.resource_keys)
         self.resources[uid] = resource.encode('utf8')
         self.resource_keys[resource.name] = uid
         self.datasource_keys[uid] = self.name
@@ -168,6 +173,7 @@ class PollingServiceBase(metaclass=ABCMeta):
         all_resources = [x for x in self.get_all_resources()]
         self.log.info("The resources that are available number %s.", len(all_resources))
         for resource in self.get_all_resources():
+            self.log.info("The resource keys are %s", [x for x in self.resource_keys])
             if not resource in self.resource_keys:
                 unregistered.append(resource)
             else:

@@ -8,3 +8,6 @@ properties:
   port:
     type: int
     default: 80
+  apikeys:
+    type: list
+    default: []
