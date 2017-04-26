@@ -53,8 +53,7 @@ class DataPipeline(dict):
         if len(plugin_dict) > 0:
             version = plugin_dict['version']
             plgn_type = plugin_dict['type']
-            template_schema = self.get_schema('dataplugins', plgn_type,\
-                    version)
+            template_schema = self.get_schema('dataplugins', plgn_type, version)
             if self.validate_schema(plugin_dict, template_schema):
                 if 'parsers' in plugin_dict['config'].keys(): 
                     # check that parsers are actually in the config
@@ -62,8 +61,7 @@ class DataPipeline(dict):
                     parsers = plugin_dict['config']['parsers']
                     plgn_type = parsers[0]['type']
                     version = parsers[0]['config']['version']
-                    template_schema = self.get_schema('parsers', plgn_type,\
-                            version)
+                    template_schema = self.get_schema('parsers', plgn_type, version)
                     if self.validate_schema(parsers, template_schema):
                         parser_good = True
                 if 'datasources' in plugin_dict['config'].keys():
@@ -72,14 +70,11 @@ class DataPipeline(dict):
                     datasources = plugin_dict['config']['datasources']
                     plgn_type = datasources[0]['type']
                     version = datasources[0]['config']['version']
-                    template_schema = self.get_schema('transports', plgn_type,\
-                            version)
+                    template_schema = self.get_schema('transports', plgn_type, version)
                     if self.validate_schema(datasources, template_schema):
                         datasource_good = True
-                if ((datasource and datasource_good) and \
-                        (parser and parser_good)) or ((not datasource) and \
-                        (parser and parser_good)) or ((not parser) and \
-                        (datasource and datasource_good)):
+                if ((datasource and datasource_good) and (parser and parser_good)) or ((not datasource) and \
+                        (parser and parser_good)) or ((not parser) and (datasource and datasource_good)):
                     self.dataplugins.append(plugin_dict)
                     return self.dataplugins
 
@@ -160,8 +155,7 @@ class DataPipeline(dict):
         This function creates a dataplugin template and returns it.
         
         """
-        plgn_template = components['dataplugins'].get_plugin_schema(name,\
-                version)
+        plgn_template = components['dataplugins'].get_plugin_schema(name, version)
         print("dataplugin template", plgn_template)
         return plgn_template
     
@@ -171,8 +165,7 @@ class DataPipeline(dict):
         This function creates a transform tempalte and returns it.
         
         """
-        transform_template  = components['transforms'].get_plugin_schema(name,\
-                version)
+        transform_template  = components['transforms'].get_plugin_schema(name, version)
         print("transform_template", transform_template)
         return transform_template
 
@@ -207,8 +200,7 @@ class DataPipeline(dict):
         manager.load_schemas()
         schema = manager.get_plugin_schema(plugin_name, version)
         if not schema:
-            return ("Cannot find schema for", component_type, plugin_name,\
-                    version)
+            return ("Cannot find schema for", component_type, plugin_name, version)
         return schema
 
     @staticmethod
@@ -242,26 +234,20 @@ class DataPipeline(dict):
         conformation_dict = {}
         isfile = False
         try:
-            if os.path.isfile(output_directory):
+            if os.path.isdir(output_directory):
+                print("Error the output path %s does not appear to be a file.", output_directory)
+            else:
                 isfile = True
                 object_file = open(output_directory, "w")
-                object_file.write(yaml.dump(config_dict, indent=2,\
-                        default_flow_style=False))
+                object_file.write(yaml.dump(config_dict, indent=2, default_flow_style=False))
                 object_file.close()
-            else:
-                print ("Error: File", output_directory,\
-                        "does not appear to exist")
         except IOError as e:
-            print ("Error: File", output_directory,\
-                    "does not appear to exist")
+            print("Input/output error!")
 
         if isfile:
-            conformation_dict['Time written'] = \
-                    time.ctime(os.path.getmtime(output_directory))
-            conformation_dict['File size in bytes'] = \
-                    os.path.getsize(output_directory)
-            conformation_dict['Name of config file'] = \
-                    output_directory.split('/').pop()
+            conformation_dict['Time written'] = time.ctime(os.path.getmtime(output_directory))
+            conformation_dict['File size in bytes'] = os.path.getsize(output_directory)
+            conformation_dict['Name of config file'] = output_directory.split('/').pop()
             print(conformation_dict)
             return conformation_dict
 

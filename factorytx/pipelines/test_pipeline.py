@@ -72,7 +72,7 @@ def test_full_plugin():
         pipeline.add_tx(tx)
 
     config_dict = pipeline.create_config_dict()
-    output_directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/test.cfg'
+    output_directory = '/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/extranew_test.cfg'
     pipeline.write_config(config_dict, output_directory)
 
     assert 0
