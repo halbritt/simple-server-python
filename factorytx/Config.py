@@ -134,6 +134,8 @@ class Config(dict):
         watcher_type = 'remotedatapost'
 
         cfg_errors_count = 0
+        all_incoming_data = []
+        all_outgoing_data = []
         for cfg_file, cfg in self.plugin_confs.items():
             # TODO: Move all of this logic into the plugins and just call
             #       loadParameters() here instead of duplicating it all inline.
@@ -176,6 +178,10 @@ class Config(dict):
                         datasources = plgn_cfg.get('datasources')
                         # Try to validate datasources (polling services)
                         for datasource in datasources:
+                            if dataplugin == 'dataplugins':
+                                all_incoming_data.append(datasource)
+                            elif dataplugin == 'tx':
+                                all_outgoing_data.append(datasource)
                             data_cfg = datasource.get('config')
                             if not data_cfg: data_cfg = {}
                             if 'type' in datasource:
@@ -224,29 +230,11 @@ class Config(dict):
                             for entry in category[manager]:
                                 log.info("Loading the %s with type %s.", entry['name'], entry['type'])
                             self.plugin_conf_list = [(next_cat[0], manager, category)] + self.plugin_conf_list
-
-            for watcher_cfg in cfg.get('watchers', []):
-                wtchr_ver = watcher_cfg['version']
-                wtchr_schema = plugin_manager.get_plugin_schema(watcher_type,
-                                                                wtchr_ver)
-
-                if not wtchr_schema:
-                    log.error('Cant find schema for plugin "{}" '
-                              'with version {}'.format(watcher_type,
-                                                       wtchr_ver))
-                    cfg_errors_count += 1
-                    continue
-
-                try:
-                    validate(watcher_cfg, wtchr_schema)
-                except Exception as e:
-                    log.error('Error in config for watcher in file: '
-                              '{}'.format(cfg_file))
-                    log.error(str(e))
-                    cfg_errors_count += 1
-                    continue
-
-                self.plugin_conf_list.append((watcher_type, watcher_cfg))
+        outgoing_set = set([x['name'] for x in all_outgoing_data])
+        for x in all_incoming_data:
+            if x['name'] not in outgoing_set:
+                log.error("There was no outgoing tx specified for the datasource %s", x['name'])
+                cfg_errors_count += 1
 
         if cfg_errors_count:
             log.error('Found {} error(s) in config files'
