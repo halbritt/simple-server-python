@@ -20,6 +20,19 @@ class RDP1(PollingServiceBase):
         super(RDP1, self).setup_log(logname)
         self.root_path = os.path.abspath(self.root_path)
 
+    def poll(self, persisted):
+        """ Polls my resources to try and find new unregistered resources.
+
+        """
+        print("The persisted keys are", [x for x in persisted.items()])
+        resource_candidates = self.get_all_resources()
+        new_resources = []
+        for resource in resource_candidates:
+            registration = self.register_resource(resource)
+            self.last_registered = registration[0]
+            new_resources.append((registration[1:], resource))
+        return new_resources
+
     def prepare_resource(self, resource):
         return resource
 
@@ -55,3 +68,6 @@ class RDP1(PollingServiceBase):
     def start(self):
         print("Do the right thing to start the server here")
         self.server = RDP1Server.start_server(self.host, self.port, self.data_store, self.apikeys)
+
+    def stop(self):
+        self.server.stop_server()

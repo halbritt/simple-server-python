@@ -109,40 +109,7 @@ class DataPluginAbstract(object):
             self._makeShareData(self.process(records[-1]))
 
     def encrypt(self, records):
-        gm = global_manager
-        if not gm.get_encryption():
-            return records
-
-        (encryption_public_key,
-         encryption_padding,
-         sha1_digest) = gm.get_encryption()
-
-        symmetric_key = Fernet.generate_key()
-        encrypter = Fernet(symmetric_key)
-        encrypted_key = encryption_public_key.encrypt(
-                        symmetric_key,
-                        encryption_padding)
-
-        exclude_keys = ["source", "timestamp", "counter", "poll_rate"]
-        for ts, data in records.items():
-            enc_data = {}
-            enc_fields = []
-
-            for k, v in data.items():
-                if k in exclude_keys:
-                    enc_data[k] = v
-                else:
-                    enc_data[k] = encrypter.encrypt(json.dumps(v))
-                    enc_fields.append(k)
-
-            enc_data['encryption'] = dict(
-                key=base64.b64encode(encrypted_key),
-                fields=enc_fields,
-                pubkey_sha1=sha1_digest,
-                encoding="field-encrypt-v1"
-            )
-
-            records[ts] = enc_data
+        # TODO: Complete for at rest encryption
         return records
 
     def _load_plugin(self, manager, cfg):
@@ -165,42 +132,34 @@ class DataPluginAbstract(object):
     def save_json(self, record_id, records):
         new_records = []
         print("The records we are saving have length %s", len(records))
-        record = self.encrypt(records)
+        # record = self.encrypt(records) for at rest encryption
+        json_data = records.to_json()
+        log.info("The json data has been dumped")
+        if not os.path.exists(self.outputdirectory):
+            os.makedirs(self.outputdirectory)
+        # TODO: NEED TO GET THE TIMESTAMP OUT OF DATA BEFOREHAND
+        timestamp = 'None' # Get earliest timestamp in data
+        guid = utils.make_guid()
+        fname = '_'.join((timestamp, self._getSource(), guid))
+        fname = os.path.join(self.outputdirectory, fname)
+        dst_fname = fname + '.sm.json'
+        tmp_fname = fname + '.jsontemp'
+        if os.name == 'nt':
+            fname = fname.replace(":", "_")
+
         try:
-            chunks = utils.df_chunks(record, self.records_per_file)
+            with open(tmp_fname, 'w') as f:
+                f.write(json_data)
+            # rename .jsontemp to .sm.json
+            os.rename(tmp_fname, dst_fname)
         except Exception as e:
-            log.error("The exception is %s for the chunking", e)
-            print("There is a problem")
-        for chunk in chunks:
-            json_data = json.dumps(chunk)
-            log.info("The json data has been dumped")
-
-            if not os.path.exists(self.outputdirectory):
-                os.makedirs(self.outputdirectory)
-            # TODO: NEED TO GET THE TIMESTAMP OUT OF DATA BEFOREHAND
-
-            timestamp = 'None' # Get earliest timestamp in data
-            guid = utils.make_guid()
-            fname = '_'.join((timestamp, self._getSource(), guid))
-            fname = os.path.join(self.outputdirectory, fname)
-            dst_fname = fname + '.sm.json'
-            tmp_fname = fname + '.jsontemp'
-            if os.name == 'nt':
-                fname = fname.replace(":", "_")
-
-            try:
-                with open(tmp_fname, 'w') as f:
-                    f.write(json_data)
-                # rename .jsontemp to .sm.json
-                os.rename(tmp_fname, dst_fname)
-            except Exception as e:
-                log.error('Failed to save data into {} {} {}'.format(
-                    self.outputdirectory, fname, e))
-                raise
-            else:
-                self.log.info('Saved data into {}'.format(fname))
-            self.register_data_frame(record_id, guid, dst_fname)
-            new_records.append((record_id, guid, chunk))
+            log.error('Failed to save data into {} {} {}'.format(
+                self.outputdirectory, fname, e))
+            raise
+        else:
+            self.log.info('Saved data into {}'.format(fname))
+        self.register_data_frame(record_id, guid, dst_fname)
+        new_records.append((record_id, guid, records))
         return new_records
 
     @property
@@ -215,33 +174,30 @@ class DataPluginAbstract(object):
         self._connected = False
         return True
 
+    def perform_teardown(self):
+        return
+
     def reconnect(self):
-        # If we got here, we probably aren't connected
         self._connected = False
-
+        self.perform_teardown()
         log.warning('Connection lost to %s. Trying to reconnect to %s', self.host, self.logname)
-
         count = 0
         keep_trying = True
         while keep_trying:
             sleep(self.reconnect_timeout)
             log.warning('Reconnection Attempt: %s for %s', count, self.logname)
-
             try:
                 self.connect()
             except Exception as e:
                 log.warning("Connection Error: %s for %s", e, self.logname)
-
             if self.connected:
                 return
-
             count += 1
             # Attempt to reconnect forever unless defined in config to override
             if (self.reconnect_attempts != -1
                     and self.reconnect_attempts < float('inf')):
                 if count >= self.reconnect_attempts:
                     keep_trying = False
-
         raise Exception('Failed to reconnect after {} attempts'
                         ''.format(self.reconnect_attempts))
 
@@ -249,20 +205,9 @@ class DataPluginAbstract(object):
         log.info("Emitting %s records for the plugin %s", len(records), self.logname)
         log.debug("The record info is %s", records[0])
         records_id, records = records
-        use_share = getattr(self, 'share', False)
-        use_raw_log = getattr(self, 'raw_log', False)
-        share_and_save = getattr(self, 'share_and_save', False)
-
-        if use_share:
-            self.save_share(records)
-            if share_and_save:
-                records = self.save_json(records_id, records)
-        elif use_raw_log:
-            self.save_raw(records)
-        else:
-            self.log.info("Persisting %s records in JSON", len(records))
-            records = self.save_json(records_id, records)
-            self.log.info("Saved the JSON")
+        self.log.info("Persisting %s records in JSON", len(records))
+        records = self.save_json(records_id, records)
+        self.log.info("Saved the JSON")
         if len(records) > 0:
             for record in records:
                 self.log.info("Passing the records with id %s onto the next component", record[0])
@@ -292,12 +237,14 @@ class DataPluginAbstract(object):
             log.debug("The untxed are %s.", untxed)
             for untx in untxed:
                 frame_id = untx[0]
-                datasource = untx[1]['datasource']
-                frame_path = untx[1]['frame_path']
+                resource = self.tx_dict[frame_id]
+                self.log.info("The untxed resource is %s", resource)
+                datasource = resource['datasource']
+                frame_path = resource['frame_path']
                 if os.path.exists(frame_path):
                     log.debug("Loading the frame from %s")
                     with open(frame_path, 'r') as f:
-                        frame = read_json(f)
+                        frame = DataFrame(read_json(f))
                     self.log.info("Transmitting the frame %s again.")
                     self.push_frame(datasource, frame_id, frame)
                 else:

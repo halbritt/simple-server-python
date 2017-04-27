@@ -52,7 +52,8 @@ class RDP1Server:
             print("The error is %s", e)
             cherrypy.response.status = 500
 
-
+    def stop_server():
+        cherrypy.engine.exit()
 
     def start_server(host, port, data_store, apikeys):
         server = RDP1Server(data_store)

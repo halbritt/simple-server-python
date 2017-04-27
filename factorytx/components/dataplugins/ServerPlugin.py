@@ -30,12 +30,15 @@ class ServerPlugin(DataPlugin):
     def connect(self):
         self.server.start()
 
+    def perform_teardown(self):
+        self.server.stop()
+
     def read(self):
         print("Do something interesting here")
         file_entries = []
         process_cnt = 0
         self.log.info("Looking for files in the FileTransport object.")
-        new_entries = self.server.poll()
+        new_entries = self.server.poll(self.resource_dict)
         found_entries = []
         self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
         for resource in new_entries:
