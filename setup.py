@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import os, sys, glob, fnmatch
 
 entry_names = ['dataplugins', 'transforms', 'tx', 'filters']
-sub_entry_names = ['transports', 'parsers']
+sub_entry_names = ['pollingservices', 'parsers']
 entrypoints = [os.path.join(os.path.dirname(__file__), 'factorytx', 'components', x, x + '.ini') \
                for x in entry_names]
 entrypoints += [os.path.join(os.path.dirname(__file__), 'factorytx/components/dataplugins', x, x + '.ini') \
@@ -27,22 +27,27 @@ package_data = {
     'factorytx': folders_and_files
 }
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(
-    name = "factorytx",
-    version = "0.1.0",
-    download_url = '',
+    name="factorytx",
+    version='0.1.0',
+    # download_url='https://github.com/sightmachine/factorytx/tarball/master',
     description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
     long_description = 'The factorytx framework allows easy intake, processing, and forwarding of unstructured data.',
-    classifiers = [ ],
-    keywords = '',
-    author = 'Sight Machine',
-    author_email = 'support@sightmachine.com',
-    url = 'http://sightmachine.com/',
-    license = '',
-    packages = find_packages(exclude=['ez_setup']),
-    zip_safe = False,
-    requires = [],
-    package_data = package_data,
-    data_files = [ ],
-    entry_points = entry_points,
+    # classifiers=[ ],
+    # keywords='',
+    author='Sight Machine',
+    author_email='support@sightmachine.com',
+    url='https://github.com/sightmachine/factorytx',
+    license='',
+    packages=find_packages(exclude=["tests.*", "tests"]),
+    zip_safe=False,
+    package_data=package_data,
+    # data_files=[ ],
+    entry_points=entry_points,
+    install_requires=required,
+    tests_require=['pytest'],
+    test_suite='tests'
 )

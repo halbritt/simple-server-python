@@ -3,7 +3,7 @@ import logging
 import os.path
 
 from factorytx.utils import merge_schema_defaults
-from factorytx.components.dataplugins.pollingservices import PollingServiceBase, Resource
+from factorytx.components.dataplugins.resource import Resource
 
 log = logging.getLogger("File Polling Base Classes")
 
@@ -49,60 +49,3 @@ class FileEntry(Resource):
     def __repr__(self):
         return ("FileEntry(transport={self.transport!r}, path={self.path!r}, "
                 "mtime={self.mtime!r}, size={self.size!r}, root_path={self.root_path!r})").format(self=self)
-
-
-class FileTransport(PollingServiceBase):
-    """Base class for file or resource transports, ex. to access files over
-    SMB, FTP, HTTP, etc.
-
-    """
-
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self):
-        super(FileTransport, self).__init__()
-
-    def loadParameters(self, schema, conf):
-        super(FileTransport, self).loadParameters(schema, conf)
-        if conf is None:
-            conf = {}
-        self.__dict__.update(conf)
-        merge_schema_defaults(schema, self.__dict__)
-
-    @abc.abstractmethod
-    def copy_file(self, file_entry, local_path):
-        """Copies a remote file to the specified local path, preserving the
-        last modification time.
-
-        :param file_entry: FileEntry object representing the file to fetch.
-        :param local_path: path to save the file to. Leading directory
-            components must already exist. If a file already exists at the
-            path it will be overwritten.
-        :returns: None
-        :raises Exception: if copying the file did not succeed.
-
-        """
-        pass
-
-    @abc.abstractmethod
-    def delete_file(self, file_entry):
-        """Removes a remote file.
-
-        :param file_entry: FileEntry object representing the file to remove.
-        :returns: None
-        :raises Exception: if deleting the file did not succeed.
-
-        """
-        pass
-
-    @abc.abstractmethod
-    def list_files(self):
-        """Returns a list of FileEntry objects representing all files currently
-        available via the transport.
-
-        :returns: a list of FileEntry objects.
-        :raises Exception: if the transport was not able to list all files on
-            the remote system.
-
-        """
-        pass

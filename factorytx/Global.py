@@ -22,7 +22,7 @@ signal_manager = signal_manager()
 service_manager = service_manager()
 dataplugin_manager = components['dataplugins']
 parser_manager = components['parsers']
-transport_manager = components['transports']
+pollingservice_manager = components['pollingservices']
 transformation_manager = components['transforms']
 filter_manager = components['filters']
 tx_manager = components['tx']
@@ -38,7 +38,7 @@ def global_state():
     """
     managers = {'global_manager': global_manager,
                 'signal_manager': signal_manager,
-                'transport_manager': transport_manager,
+                'pollingservice_manager': pollingservice_manager,
                 'service_manager': service_manager,
                 'plugin_manager': dataplugin_manager,
                 'transformation_manager': transformation_manager,

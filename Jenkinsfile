@@ -1,5 +1,7 @@
+#!groovy
+@Library('jenkins-pipeline-shared@master') _
 pipeline {
-    agent { label 'docker' }
+    agent { label 'declarative' }
     options {
             disableConcurrentBuilds()
             buildDiscarder(logRotator(numToKeepStr:'10'))
@@ -9,43 +11,38 @@ pipeline {
     stages {
         stage ('Virtualenv setup') {
             steps {
-                // sh 'virtualenv factorytx-venv && . factorytx-venv/bin/activate && python $(which pip) install .'
-                echo 'setup env here'
+                echo "create virtualenv and install factorytx here"
+                // script {
+                //          env['SMTOOL_BUILD'] = true
+                //          env['SMTOOL_CONFIG_DIR'] = env['WORKSPACE']
+                //          sh 'virtualenv factorytx-venv && . factorytx-venv/bin/activate && python $(which pip) install . && python $(which pip) install -r test-requirements.txt'
+                //      }
             }
         }
         stage('Test') {
             steps {
-                // sh '. factorytx-venv/bin/activate && pip install -U pytest && pytest'
                 echo 'testing here'
+                // sh '. factorytx-venv/bin/activate && python3 -m pytest tests'
             }
         }
         stage("Build") {
             steps {
-                // sh 'python setup.py sdist'
                 echo 'build here'
+                // sh 'python3 setup.py sdist'
             }
             post {
                 success {
-                    // archiveArtifacts 'dist/factorytx*.tar.gz'
                     echo 'archive here'
+                    // archiveArtifacts 'dist/factorytx*.tar.gz'
                 }
             }
         }
     }
     post {
         always {
-            // sh 'rm -rf factorytx-venv ** dist'
             echo 'clean up'
-        }
-        success {
-            slackSend channel: '#coding',
-                color: 'good',
-                message: "The pipeline ${currentBuild.fullDisplayName} completed successfully."
-        }
-        failure {
-            mail to: 'ops@sightmachine.com',
-                subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
-                body: "Something is wrong with ${env.BUILD_URL}"
+            // sh 'rm -rf factorytx-venv ** dist'
+            sendNotifications currentBuild.result
         }
     }
 }

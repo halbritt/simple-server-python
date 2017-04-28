@@ -2,11 +2,13 @@ import os
 import os.path
 import shutil
 import logging
+import tempfile
 
-from factorytx.components.dataplugins.transports.base import FileEntry, FileTransport
+from factorytx.components.dataplugins.pollingservices.pollingservicebase import PollingServiceBase
+from factorytx.components.dataplugins.resources.fileentry import FileEntry
 
 
-class LocalFileTransport(FileTransport):
+class LocalFileTransport(PollingServiceBase):
 
     logname = 'LocalFileTransport'
 
@@ -39,6 +41,24 @@ class LocalFileTransport(FileTransport):
                 )
                 file_entries.append(file_entry)
         return file_entries
+
+    def prepare_resource(self, resource):
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            self.log.info("Copying the file")
+            self.copy_file(resource, temp_file.name)
+            self.log.info("Force temporary file to retain time")
+            try:
+                os.utime(temp_file.name, (int(float(resource.mtime)), int(float(resource.mtime))))
+            except Exception as e:
+                self.log.error("There was an error processing %s: %s", temp_file.name, e)
+            file_size = os.path.getsize(temp_file.name)
+            self.log.info("Copied %s bytes from remote file %s to %s", file_size, resource.path, temp_file.name)
+            completed_path = os.path.join(self.completed_folder, os.path.basename(resource.path))
+            self.log.info("Found the completed path %s", completed_path)
+            resource.completed_path = completed_path
+            resource.temp_file = temp_file.name
+        self.log.info("Completed the resource preparation")
+        return resource
 
     def return_resource_class(self):
         return FileEntry
