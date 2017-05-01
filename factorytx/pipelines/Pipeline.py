@@ -51,8 +51,14 @@ class DataPipeline(dict):
         datasource = False
         datasource_good = False
         if len(plugin_dict) > 0:
-            version = plugin_dict['version']
-            plgn_type = plugin_dict['type']
+            if 'version' in plugin_dict:
+                version = plugin_dict['version']
+            else:
+                return ('Error: version is required to add a data plugin')
+            if 'type' in plugin_dict:
+                plgn_type = plugin_dict['type']
+            else:
+                return ('Error: type is required to add a data plugin')
             template_schema = self.get_schema('dataplugins', plgn_type, version)
             if self.validate_schema(plugin_dict, template_schema):
                 if 'parsers' in plugin_dict['config'].keys(): 
