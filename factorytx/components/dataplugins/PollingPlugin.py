@@ -12,7 +12,7 @@ from factorytx import utils
 
 component_manger = component_manager()
 parser_manager = component_manger['parsers']
-transport_manager = component_manger['transports']
+pollingservice_manager = component_manger['pollingservices']
 
 log = logging.getLogger("Polling Plugin")
 
@@ -30,13 +30,15 @@ class PollingPlugin(DataPlugin):
         super(PollingPlugin, self).loadParameters(sdconfig, schema, conf)
         self.parser_objs = []
         self.pollingservice_objs = []
+        self.log.debug("My polling config is %s", conf)
         for parser_cfg in self.parsers:
             self.log.debug("Loading the parser configuration %s", parser_cfg)
             parser_obj = self._load_plugin(parser_manager, parser_cfg)
             self.parser_objs.append(parser_obj)
         for polling_service_cfg in self.datasources:
             self.log.debug("Loading the polling service configuration %s", polling_service_cfg)
-            polling_obj = self._load_plugin(transport_manager, polling_service_cfg)
+            polling_obj = self._load_plugin(pollingservice_manager, polling_service_cfg)
+            polling_obj.completed_folder = self.completed_folder
             self.pollingservice_objs.append(polling_obj)
 
     def read(self):
@@ -71,12 +73,10 @@ class PollingPlugin(DataPlugin):
             if not polling_service.name in parser_obj.datasources:
                 log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
                 continue
-            if not parser_obj.can_parse(resource.path):
-                log.info("The parser can't parse %s", resource.path)
-                continue
-            parsed = True
+            resource = polling_service.prepare_resource(resource)
             resource = parser_obj.parse(resource)
-            self.log.info("The new records are %s with headers %s", len(new_records), new_records[0])
+            self.log.info("The new records are %s lines long.", len(resource))
+            self.log.info("The headers are %s.", resource.iloc(0))
         frame = resource
-        log.debug("The processing entry yielded the sets %s of len", len(frame.data))
+        log.debug("The processing entry yielded the sets %s of len", len(frame))
         return frame

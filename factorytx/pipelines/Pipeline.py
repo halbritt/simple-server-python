@@ -3,21 +3,15 @@ import yaml
 import os
 import time
 from jsonschema import validate
-from factorytx.managers.GlobalManager import global_manager
 from factorytx.managers.PluginManager import component_manager
-from factorytx.Global import setup_log
 from factorytx import utils
 
-global_manager = global_manager()
 try:
     import ujson as json
 except:
     import json
 
 log = logging.getLogger(__name__)
-
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
 
 components = component_manager()
 
@@ -224,7 +218,7 @@ class DataPipeline(dict):
             validate(new_schema, template_schema)
             return True
         except Exception as e:
-            print ("Error validating schema: ", e)
+            print("Error validating schema: ", e)
             return False
 
     @staticmethod
@@ -263,7 +257,6 @@ class DataPipeline(dict):
         will be dumped to a yaml file in the write_config() function.
         Returns a dictionary unless there are no elements in any of the
         lists, it returns an error message.
-        
         """
         config_dict = {}
         config_dict['pipeline'] = []
@@ -283,7 +276,6 @@ class DataPipeline(dict):
             return ("There is nothing in the configuration dictionary")
         else:
             return config_dict
-
 
     @staticmethod
     def create_config_file():

@@ -182,12 +182,7 @@ class Config(dict):
                                 data_cfg.update({'name':datasource['name'], 'type':datasource['type'], 'plugin_type':plgn_type})
                             else:
                                 data_cfg.update({'name':datasource['name'], 'type':plgn_type, 'plugin_type':plgn_type})
-                            #remove = []
-                            #for dta in datasources:
-                            #    if dta['name'] != datasource['name']:
-                            #        remove.append(dta)
-                            #datasources = [x for x in datasources if x not in remove]
-                            #data_cfg['datasources'] = datasources
+                            datasource['config'] = data_cfg
                         parsers = plgn_cfg.get('parsers')
                         # Try to validate the parsers for this plugin
                         if parsers and isinstance(parsers, list):
@@ -208,9 +203,11 @@ class Config(dict):
                                     log.error(str(e))
                                     cfg_errors_count += 1
                                     continue
-                        elif not parsers:
-                           no_parsers = True
-                           continue
+                        elif not parsers and not next_cat[0] == 'dataplugins':
+                            no_parsers = True
+                            continue
+                        else:
+                            plgn_cfg['name'] = plugin['name']
 
                         try:
                             validate(plgn_cfg, plgn_schema)

@@ -218,9 +218,9 @@ class SpreadSheetParser(BaseParser, CodesMixin):
                     sheet[field] = sheet[field].apply(lambda x: safe_localize(x, local))
 
         if parse_timestamps is not None:
-            print "Parsing the timestamps", parse_timestamps
+            print("Parsing the timestamps", parse_timestamps)
             for field, pattern in parse_timestamps.items():
-                print "Applying the field and patterns", field, pattern
+                print("Applying the field and patterns", field, pattern)
                 sheet[field] = sheet[field].apply(lambda x: safe_strptime(x, pattern))
                 if localtz:
                     local = pytz.timezone(localtz)
@@ -250,7 +250,7 @@ class SpreadSheetParser(BaseParser, CodesMixin):
                     # Should this trigger an exception?
                     raise Exception("Incomplete regex configuration; missing target, pattern, or source")
                 else:
-                    :         src_column = None
+                    src_column = None
                     try:
                         src_column = sheet[source]
                     except Exception as e:

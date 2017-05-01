@@ -1,0 +1,13 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  host:
+    type: string
+    default: localhost
+  port:
+    type: integer
+    default: 80
+  poll_rate:
+    type: integer
+    default: 5
