@@ -42,8 +42,6 @@ class DataPipeline(dict):
         """
         parser = False
         parser_good = False
-        datasource = False
-        datasource_good = False
         if len(plugin_dict) > 0:
             if 'version' in plugin_dict:
                 version = plugin_dict['version']
@@ -64,17 +62,7 @@ class DataPipeline(dict):
                     template_schema = self.get_schema('parsers', plgn_type, version)
                     if self.validate_schema(parsers, template_schema):
                         parser_good = True
-                if 'datasources' in plugin_dict['config'].keys():
-                    # check that datasources are actually in the config
-                    datasource = True
-                    datasources = plugin_dict['config']['datasources']
-                    plgn_type = datasources[0]['type']
-                    version = datasources[0]['config']['version']
-                    template_schema = self.get_schema('transports', plgn_type, version)
-                    if self.validate_schema(datasources, template_schema):
-                        datasource_good = True
-                if ((datasource and datasource_good) and (parser and parser_good)) or ((not datasource) and \
-                        (parser and parser_good)) or ((not parser) and (datasource and datasource_good)):
+                if (parser and parser_good) or (not parser):
                     self.dataplugins.append(plugin_dict)
                     return self.dataplugins
 
@@ -197,6 +185,7 @@ class DataPipeline(dict):
         """
         manager = components[component_type]
         print("The manager is %s", manager, component_type, plugin_name)
+        print("")
         manager.load_schemas()
         schema = manager.get_plugin_schema(plugin_name, version)
         if not schema:
@@ -215,6 +204,7 @@ class DataPipeline(dict):
         """
         try:
             print("Trying to validate %s, %s", new_schema, template_schema)
+            print("")
             validate(new_schema, template_schema)
             return True
         except Exception as e:
@@ -236,6 +226,7 @@ class DataPipeline(dict):
         try:
             if os.path.isdir(output_directory):
                 print("Error the output path %s does not appear to be a file.", output_directory)
+                print("")
             else:
                 isfile = True
                 object_file = open(output_directory, "w")
