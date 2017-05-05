@@ -91,7 +91,7 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> bool:
+    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame, binary=None) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
@@ -101,6 +101,9 @@ class TXAbstract(object):
         log.info("The dataframe has been saved")
         passed_all = True
         frame_info = self.tx_ref[frame_id]
+        if binary:
+            log.info("The binary is %s", binary)
+            print("The frame is %s", dataframe)
         for tx in self.tx_objs:
             if datasource in tx.data_reference:
                 data = tx.data_reference[datasource]
@@ -205,6 +208,13 @@ class TXAbstract(object):
         raise Exception('Failed to reconnect after {} attempts'
                         ''.format(self.reconnect_attempts))
 
+    def load_binary(self, attachment):
+        self.log.info("The attachment is %s", attachment)
+        with open(attachment, 'rb') as f:
+            attachment = f.read()
+        self.log.info("Loaded the attachment %s", attachment)
+        return attachment
+
     def run(self) -> ():
         """ Proceeds in the loop of pulling off txes and transmitting them.
 
@@ -237,10 +247,15 @@ class TXAbstract(object):
                     log.info("Getting Next TX")
                     res = self.get_next_tx()
                     log.info("The first tx arg is %s", res['frame_id'])
-                    log.info("TXing the data")
+                    log.info("The tx is %s", res)
+                    if res['binary_attachment']:
+                        binary = self.load_binary(res['binary_attachment'])
+                    else:
+                        binary = None
+                    log.info("TXing the data %s", res)
                     tx_done = False
                     while not tx_done:
-                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
+                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'], binary)
                         if not tx_status:
                             log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
                         else:

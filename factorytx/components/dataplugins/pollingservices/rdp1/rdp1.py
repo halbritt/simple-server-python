@@ -48,13 +48,16 @@ class RDP1(PollingServiceBase):
             for fle in filename:
                 if fle.endswith('headers'): continue
                 header_name = fle + 'headers'
+                binary_name = fle + 'binaryattachment'
                 if header_name in filename:
                     resource = {'headers':header_name, 'data':fle, 'path': self.data_store, 'poll': self.logname}
+                    if binary_name in filename:
+                        resource['binaryattachment'] = binary_name
                     resource = RDP1Payload(resource)
                     if resource.name in self.resource_keys:
                         continue
                     new_resources.append(resource)
-        return new_resources
+        return sorted(new_resources)
 
     def partition_resources(self, resources):
         return resources

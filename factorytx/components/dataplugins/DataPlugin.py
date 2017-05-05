@@ -131,9 +131,17 @@ class DataPluginAbstract(object):
 
     def save_json(self, record_id, records):
         new_records = []
+        if type(records) == tuple:
+            records, binary, filename, content_type = records
+        else:
+            binary = False
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
-        json_data = records.to_json()
+        try:
+            json_data = records.to_json()
+        except AttributeError as e:
+            self.log.info("We are working with raw records")
+            json_data = json.dumps(records)
         log.info("The json data has been dumped")
         if not os.path.exists(self.outputdirectory):
             os.makedirs(self.outputdirectory)
@@ -158,7 +166,7 @@ class DataPluginAbstract(object):
             raise
         else:
             self.log.info('Saved data into {}'.format(fname))
-        self.register_data_frame(record_id, guid, dst_fname)
+        self.register_data_frame(record_id, guid, dst_fname, binary, filename, content_type)
         new_records.append((record_id, guid, records))
         return new_records
 
@@ -211,8 +219,7 @@ class DataPluginAbstract(object):
         if len(records) > 0:
             for record in records:
                 self.log.info("Passing the records with id %s onto the next component", record[0])
-                frame = self.convert_records(record[2])
-                self.push_frame(record[0][1], record[1], frame)
+                self.push_frame(record[0][1], record[1], record[2])
         else:
             self.log.info("There are no records to forward")
 
@@ -345,7 +352,7 @@ class DataPluginAbstract(object):
             frame_data['transmission_time'] = time.time()
             self.tx_dict[frame_id] = frame_data
             log.info("Marked the time for %s", frame_id)
-            self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame})
+            self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame, 'binary_attachment':frame_data['binary_attachment']})
             log.info("Pushed out a new dataframe with %s indexes.", len(frame))
         else:
             log.info("Failed to validate frame")
@@ -355,8 +362,11 @@ class DataPluginAbstract(object):
         if type(frame) == DataFrame:
             log.info("its a frame!")
             return True
+        elif type(frame) == dict:
+            log.info("its a dictionary representing an sslog!")
+            return True
         else:
-            log.info("its not a frame.")
+            log.info("Its not a frame.")
             return False
 
     def process_resources(self, resources):
@@ -371,10 +381,11 @@ class DataPluginAbstract(object):
         log.info("Processed %s resources while encountering %s errors.", cnt, errors)
         return processed
 
-    def register_data_frame(self, resource_id, data_frame_id, fname):
+    def register_data_frame(self, resource_id, data_frame_id, fname, binary=False, original_file=None, content_type=None):
         self.tx_dict[data_frame_id] = {'registration_time':time.time(), 'resource_id':resource_id[0],
                                        'datasource':resource_id[1], 'm_time':resource_id[2],
-                                       'frame_path': fname}
+                                       'frame_path': fname, 'binary_attachment':binary,
+                                       'original_file': original_file, 'content_type': content_type}
         self.log.info("Sucessfuly registered the resource %s to chunk %s", resource_id, data_frame_id)
 
     def over_time(self, name):
