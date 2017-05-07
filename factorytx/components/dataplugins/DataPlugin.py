@@ -348,7 +348,12 @@ class DataPluginAbstract(object):
     def push_frame(self, datasource, frame_id, frame):
         if self.validate_frame(frame):
             log.info("Transmitting the dataframe %s", self.tx_dict[frame_id])
+            log.info("Found the frame %s", frame)
             frame_data = self.tx_dict[frame_id]
+            if frame_data['binary_attachment']:
+                attach_dic = {'filename': frame_data['original_file'], 'content_encoding': 'raw',
+                              'content_type': frame_data['content_type']}
+                frame['attachment'] = attach_dic
             frame_data['transmission_time'] = time.time()
             self.tx_dict[frame_id] = frame_data
             log.info("Marked the time for %s", frame_id)

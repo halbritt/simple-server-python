@@ -34,9 +34,7 @@ class RemoteDataPost(BaseTX):
     def TX(self, data):
         self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
         for x in data:
-            loaded = json.loads(x)
-            self.log.info("There is now some %s records to process", len(loaded))
-            loaded = self.format_sslogs(loaded)
+            loaded = self.format_sslogs(x)
             self.log.info("Now we have formatted the sslogs for rdp transmission.")
             payload = self.make_payload(loaded)
             self.log.debug("Made the payload")

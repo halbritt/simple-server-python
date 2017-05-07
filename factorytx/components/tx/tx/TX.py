@@ -103,8 +103,13 @@ class TXAbstract(object):
         frame_info = self.tx_ref[frame_id]
         if binary:
             log.info("The binary is %s", binary)
-            print("The frame is %s", dataframe)
+            if 'attachment' in dataframe:
+                dataframe['attachment']['content'] = binary
+            dataframe = [dataframe]
+        print("The tx objects are", self.tx_objs)
         for tx in self.tx_objs:
+            print("The tx data reference is %s", tx.data_reference)
+            print("The datasource is %s", datasource)
             if datasource in tx.data_reference:
                 data = tx.data_reference[datasource]
                 log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
