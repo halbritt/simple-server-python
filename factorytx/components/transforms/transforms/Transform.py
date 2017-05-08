@@ -143,33 +143,10 @@ class TransformAbstract(object):
     def reconnect(self):
         # If we got here, we probably aren't connected
         self._connected = False
-
-        log.warning('Connection lost to {}. Trying to reconnect'
-                    ''.format(self.host))
-
-        count = 0
-        keep_trying = True
-        while keep_trying:
-            time.sleep(self.reconnect_timeout)
-            log.warning('Reconnection Attempt: {}'.format(count))
-
-            try:
-                self.connect()
-            except Exception as e:
-                log.warning("Connection Error: {}".format(e))
-
-            if self.connected:
-                return
-
-            count += 1
-            # Attempt to reconnect forever unless defined in config to override
-            if (self.reconnect_attempts != -1
-                    and self.reconnect_attempts < float('inf')):
-                if count >= self.reconnect_attempts:
-                    keep_trying = False
-
-        raise Exception('Failed to reconnect after {} attempts'
-                        ''.format(self.reconnect_attempts))
+        try:
+            self.connect()
+        except Exception as e:
+            self.log.error("The reconnection failed with error %s", e)
 
     def run(self) -> ():
         """ Finds dataframes and manipulates them according to my rules. """
