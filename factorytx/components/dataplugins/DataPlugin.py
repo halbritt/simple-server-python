@@ -136,6 +136,8 @@ class DataPluginAbstract(object):
             records, binary, filename, content_type = records
         else:
             binary = False
+            filename = None
+            content_type = None
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         try:

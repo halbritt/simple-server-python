@@ -237,9 +237,14 @@ class Config(dict):
                                 log.info("Loading the %s with type %s.", entry['name'], entry['type'])
                             self.plugin_conf_list = [(next_cat[0], manager, category)] + self.plugin_conf_list
         outgoing_set = set([x['name'] for x in all_outgoing_data])
+        incoming_set = set([x['name'] for x in all_incoming_data])
         for x in all_incoming_data:
             if x['name'] not in outgoing_set:
                 log.error("There was no outgoing tx specified for the datasource %s", x['name'])
+                cfg_errors_count += 1
+        for x in all_coutgoing_data:
+            if x['name'] not in incoming_set:
+                log.error("There is no incoming dataplugin specified for the tx datasource %s.", x['name'])
                 cfg_errors_count += 1
 
         transform_set = set([x['name'] for x in all_transforms])
