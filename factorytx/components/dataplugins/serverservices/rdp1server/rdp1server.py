@@ -4,6 +4,7 @@ import os
 import time
 import json
 
+
 class RDP1Server:
 
     logname = "RDP1"
@@ -20,9 +21,8 @@ class RDP1Server:
 
     @cherrypy.expose
     def upload(self, metadata=None, ipcfile=None):
-        print("Uploading the payload %s", cherrypy.request.headers)
+        print("Uploading an RDP1 payload.")
         key_name = cherrypy.request.headers["X-Sm-Api-Key"]
-        print("The api keys I know are %s", self.apikeys)
         if key_name not in self.apikeys:
             cherrypy.response.status = 400
             print("The request doesn't have a proper API key configured")
@@ -33,21 +33,14 @@ class RDP1Server:
         if ipcfile:
             print("Uploading binary attachment")
             try:
-                print("IPC VARS")
-                print(vars(ipcfile))
-                print("IPC Headers")
-                print(ipcfile.headers)
                 ipchead = ipcfile.headers
                 files = ipcfile
-                print("METADATA VARS")
-                print(vars(metadata))
                 sslog = metadata.file.read()
                 lsslog = json.loads(sslog)
                 last_id = lsslog['_id']
                 orig_filename = lsslog['original_filename']
                 orig_content = metadata.headers['Content-Type']
                 valid_count = 1
-                print("The loaded sslog is %s", lsslog)
                 size = 0
                 with open(os.path.join(self.data_store, file_name + 'binaryattachment'), 'wb') as out:
                     while True:
@@ -61,7 +54,6 @@ class RDP1Server:
                     body = [{}]
                 else:
                     body = [sslog]
-                print("Found the sslog", sslog)
                 rawbody = sslog
             except Exception as e:
                 print("There doesn't look to be any file attachments here %s.", e)
