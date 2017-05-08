@@ -166,7 +166,6 @@ class TXAbstract(object):
         self.tx_ref[frame_id] = {'confirmation':False, 'frame_path':path}
         self.out_pipe[frame_id] = False
         log.info("Persisted the frame and registered it with my references")
-        log.info("The out is %s", vars(self.out_pipe))
 
     @property
     def connected(self):
@@ -252,12 +251,10 @@ class TXAbstract(object):
                     log.info("Getting Next TX")
                     res = self.get_next_tx()
                     log.info("The first tx arg is %s", res['frame_id'])
-                    log.info("The tx is %s", res)
                     if res['binary_attachment']:
                         binary = self.load_binary(res['binary_attachment'])
                     else:
                         binary = None
-                    log.info("TXing the data %s", res)
                     tx_done = False
                     while not tx_done:
                         tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'], binary)

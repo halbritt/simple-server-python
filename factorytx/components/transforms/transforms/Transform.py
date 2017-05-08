@@ -202,7 +202,6 @@ class TransformAbstract(object):
                         self.push_transform(next_transform)
                     else:
                         log.info("Transforming the data with id %s and resource %s", next_transform['frame_id'], next_transform['datasource'])
-                        log.info("The frame keys are %s", next_transform['frame'].keys())
                         next_transform['frame'] = self.transform(next_transform['frame'], next_transform['datasource'])
                         log.info("Pushing the Transform")
                         self.push_transform(next_transform)
