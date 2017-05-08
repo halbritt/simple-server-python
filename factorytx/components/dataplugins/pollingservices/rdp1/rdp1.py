@@ -27,8 +27,11 @@ class RDP1(PollingServiceBase):
         print("The persisted keys are", [x for x in persisted.items()])
         resource_candidates = self.get_all_resources()
         new_resources = []
+        print("The resource candidates are %s.", resource_candidates)
         for resource in resource_candidates:
             registration = self.register_resource(resource)
+            print("The registration is %s", registration)
+            registration = (registration[0], registration[1], resource.poll_name, registration[2])
             self.last_registered = registration[0]
             new_resources.append((registration[1:], resource))
         return new_resources
@@ -50,7 +53,8 @@ class RDP1(PollingServiceBase):
                 header_name = fle + 'headers'
                 binary_name = fle + 'binaryattachment'
                 if header_name in filename:
-                    resource = {'headers':header_name, 'data':fle, 'path': self.data_store, 'poll': self.logname}
+                    print("Making the rdp1 payload with vars %s.", vars(self))
+                    resource = {'headers':header_name, 'data':fle, 'path': self.data_store, 'poll': self.datasources[0]['config']['name']}
                     if binary_name in filename:
                         resource['binaryattachment'] = binary_name
                     resource = RDP1Payload(resource)

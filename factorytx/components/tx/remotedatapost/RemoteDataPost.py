@@ -33,6 +33,8 @@ class RemoteDataPost(BaseTX):
 
     def TX(self, data):
         self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
+        if type(data) == dict:
+            data = [data]
         for x in data:
             loaded = self.format_sslogs(x)
             self.log.info("Now we have formatted the sslogs for rdp transmission.")
