@@ -73,7 +73,7 @@ class RDP1Server:
             body = json.loads(rawbody)
             print("The len/body of the payload is", len(body), body[[x for x in body][-1]])
             last_id = body[[x for x in body][-1]]
-            valid_count = len_body
+            valid_count = len(body)
         try:
             if len(body) == 0:
                 raise Exception("There is no payload length to this body")
