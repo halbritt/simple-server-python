@@ -135,6 +135,8 @@ class Config(dict):
 
         cfg_errors_count = 0
         all_incoming_data = []
+        all_rdp_incoming = []
+        all_transforms = []
         all_outgoing_data = []
         for cfg_file, cfg in self.plugin_confs.items():
             # TODO: Move all of this logic into the plugins and just call
@@ -180,6 +182,10 @@ class Config(dict):
                         for datasource in datasources:
                             if dataplugin == 'dataplugins':
                                 all_incoming_data.append(datasource)
+                                if plgn_type == 'rdpreceive':
+                                    all_rdp_incoming.append(datasource)
+                            elif dataplugin == 'transforms':
+                                all_transforms.append(datasource)
                             elif dataplugin == 'tx':
                                 all_outgoing_data.append(datasource)
                             data_cfg = datasource.get('config')
@@ -234,6 +240,12 @@ class Config(dict):
         for x in all_incoming_data:
             if x['name'] not in outgoing_set:
                 log.error("There was no outgoing tx specified for the datasource %s", x['name'])
+                cfg_errors_count += 1
+
+        transform_set = set([x['name'] for x in all_transforms])
+        for x in all_rdp_incoming:
+            if x['name'] in transform_set:
+                log.error("The functionality to transform RDP1 packets has not been enabled in FTX yet, remove %s from your transforms", x['name'])
                 cfg_errors_count += 1
 
         if cfg_errors_count:
