@@ -68,7 +68,8 @@ class DataPluginAbstract(object):
 
     def loadParameters(self, sdconfig, schema, conf):
         super(DataPluginAbstract, self).loadParameters(sdconfig, schema, conf)
-        self.resource_dict = shelve.open(os.path.join(self.resource_dict_location, self.resource_dict_name + 'plugin_resources'))
+        self.resource_dict = shelve.open(os.path.join(self.resource_dict_location,
+                                                      self.resource_dict_name + 'plugin_resources'))
         self.tx_dict = shelve.open(os.path.join(self.resource_dict_location, self.resource_dict_name + 'tx-chunks'))
 
     def read(self):
@@ -257,10 +258,8 @@ class DataPluginAbstract(object):
                 else:
                     self.log.error("The frame doesn't exist to be txed: %s.", frame_id)
 
-
     def get_corresponding_chunks(self, resource_id):
         log.debug("Trying to match the resource %s to its chunks", resource_id)
-        log.debug("The TX dict is %s.", [x for x in self.tx_dict.items()])
         chunks = [(x, self.tx_dict[x]) for x in self.tx_dict if self.tx_dict[x]['resource_id'] == resource_id]
         log.debug("The chunks are %s", chunks)
         return chunks
@@ -347,10 +346,13 @@ class DataPluginAbstract(object):
 
     def push_frame(self, datasource, frame_id, frame):
         if self.validate_frame(frame):
-            log.info("Transmitting the dataframe %s", self.tx_dict[frame_id])
-            log.info("Found the frame %s", frame)
             frame_data = self.tx_dict[frame_id]
+            log.info("Transmitting the dataframe %s", frame_data)
             if frame_data['binary_attachment']:
+                log.info("Found a binary_attachment for the frame %s at %s.", frame_id,
+                         frame_data['binary_attachment'])
+                log.debug("Attachment info: filename: %s, content_encoding: %s, content_type %s",
+                          frame_data['original_file'], 'raw', frame_data['content_type'])
                 attach_dic = {'filename': frame_data['original_file'], 'content_encoding': 'raw',
                               'content_type': frame_data['content_type']}
                 frame['attachment'] = attach_dic
