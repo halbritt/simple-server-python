@@ -119,8 +119,7 @@ class SSLogTransform(TransformBase, CodesMixin):
         for chunk in utils.chunks(filtered_data, self.records_per_file):
             combined_data = self._combine_data(chunk)
             combined_data = self._serialize_timestamp_key(combined_data)
-            json_data = json.dumps(combined_data)
-            dump_data += [json_data]
+            dump_data += [combined_data]
             #if not os.path.exists(self.outputdirectory):
             #    os.makedirs(self.outputdirectory)
             #  
