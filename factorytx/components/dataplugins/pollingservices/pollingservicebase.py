@@ -79,10 +79,11 @@ class PollingServiceBase(metaclass=ABCMeta):
         print("Registering %s, with name %s", resource, resource.name)
         print("The resource dictionary is %s", self.resources)
         print("The resource keys are", self.resource_keys)
-        self.resources[uid] = resource.encode('utf8')
-        self.resource_keys[resource.name] = uid
+        resource_encoding = resource.encode('utf8')
+        self.resources[resource_encoding] = resource_encoding
+        self.resource_keys[resource.name] = resource_encoding
         self.datasource_keys[uid] = self.name
-        return resource, uid, self.name, resource.mtime
+        return resource, resource_encoding, self.name, resource.mtime
 
     def get_resource(self, uid):
         """ Gets a resource by a uid.
