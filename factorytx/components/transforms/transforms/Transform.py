@@ -53,6 +53,7 @@ class TransformAbstract(object):
         self._running = True
         self.client = None
         self.loaded_transforms = {}
+        self.transforms = []
 
     def __del__(self):
         try:

@@ -253,6 +253,13 @@ class Config(dict):
                 log.error("The functionality to transform RDP1 packets has not been enabled in FTX yet, remove %s from your transforms", x['name'])
                 cfg_errors_count += 1
 
+        found_transforms = False
+        for conf in self.plugin_conf_list:
+            if conf[0] == 'transforms':
+                found_transforms = True
+                break
+        if not found_transforms:
+            self.plugin_conf_list = [('transforms', 'transforms', {})] + self.plugin_conf_list
         if cfg_errors_count:
             log.error('Found {} error(s) in config files'
                       ''.format(cfg_errors_count))

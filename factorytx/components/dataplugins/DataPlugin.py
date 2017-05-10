@@ -263,7 +263,7 @@ class DataPluginAbstract(object):
     def get_corresponding_chunks(self, resource_id):
         log.debug("Trying to match the resource %s to its chunks", resource_id)
         chunks = [(x, self.tx_dict[x]) for x in self.tx_dict if self.tx_dict[x]['resource_id'] == resource_id]
-        log.debug("The chunks are %s", chunks)
+        log.debug("There are %s chunks.", len(chunks))
         return chunks
 
     def register_resources(self, resources):
@@ -316,7 +316,6 @@ class DataPluginAbstract(object):
             return None
 
     def filter_corresponding(self, pieces):
-        self.log.info("The corresponding pieces are %s", pieces)
         survived = []
         for piece in pieces:
             frame_info = piece[1]

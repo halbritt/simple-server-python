@@ -41,6 +41,7 @@ class ServerPlugin(DataPlugin):
         new_entries = self.server.poll(self.resource_dict)
         found_entries = []
         self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
+        self.log.info("The records say we have entries %s", [x for x in self.resource_dict.items()])
         for resource in new_entries:
             if resource[0][0] in self.resource_dict:
                 self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
