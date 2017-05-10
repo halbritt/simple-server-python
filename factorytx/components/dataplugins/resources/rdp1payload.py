@@ -36,7 +36,29 @@ class RDP1Payload(Resource):
             binary = False
             original_file = False
             original_content = False
-        return rawbody, binary, original_file, original_content
+        sslogs = self.format_sslogs(rawbody)
+        print("THE FIRST log is %s", [x for x in sslogs.items()][0])
+        return sslogs, binary, original_file, original_content
+
+    def format_sslogs(self, rawlogs, original_content=False):
+        new_logs = {}
+        for key in rawlogs:
+            log = rawlogs[key]
+            try:
+                log_id = log['_id']
+                del log['_id']
+                if original_content:
+                    content_type = original_content
+                else:
+                    content_type = None
+                log_data = log
+                sslog = {'_id': log_id, 'content_type': content_type, 'data': log_data}
+                new_logs[key] = sslog
+            except Exception as e:
+                print("The exception to sslog formatting is", e)
+                raise
+        return new_logs 
+
 
     @property
     def basename(self):
