@@ -62,9 +62,9 @@ class RemoteDataPost(BaseTX):
         protocol = self.options['protocol']
         hosturl = '{}://{}.{}'.format(protocol, tenantname, site_domain)
         if self.options['use_encryption']:
-            rel_url = '/v1/rdp2/sslogs_test_encrypt'
+            rel_url = '/v1/rdp2/sslogs'
         else:
-            rel_url = '/v1/rdp2/sslogs_test_no_encrypt'
+            rel_url = '/v1/rdp2/sslogs'
         full_url = '{}{}'.format(hosturl, rel_url)
         headers = {}
         if self.options['apikeyid']:
