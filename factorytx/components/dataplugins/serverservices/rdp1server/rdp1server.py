@@ -53,7 +53,7 @@ class RDP1Server:
                 if not sslog:
                     body = [{}]
                 else:
-                    capture_time = time.time()
+                    capture_time = datetime.utcnow().isoformat()
                     body = [sslog]
                 rawbody = sslog
             except Exception as e:
@@ -64,7 +64,7 @@ class RDP1Server:
             cl = cherrypy.request.headers['Content-Length']
             rawbody = cherrypy.request.body.read(int(cl))
             body = json.loads(rawbody)
-            capture_time = time.time()
+            capture_time = datetime.utcnow().isoformat(),
             print("The len/body of the payload is", len(body), body[[x for x in body][-1]])
             last_id = body[[x for x in body][-1]]
             valid_count = len(body)
@@ -106,7 +106,7 @@ class RDP1Server:
         return server
 
     def generate_name(self, headers):
-        time_now = time.time()
+        time_now = datetime.utcnow().isoformat()
         length = headers['Content-Length']
         key_name = headers['X-Sm-Api-Key']
         final_name = ':'.join([str(time_now), length, key_name[:min(10, len(key_name))], '.' + self.logname])

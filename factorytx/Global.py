@@ -56,7 +56,6 @@ def init_logger(log_level='INFO'):
     logging.getLogger("requests").setLevel(logging.WARNING)
     return log_level
 
-
 @contextlib.contextmanager
 def lock_or_die(lockfile_path):
     """Locks the specified file, or logs an error and exits."""

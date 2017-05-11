@@ -1,4 +1,7 @@
 import os
+from bson import objectid
+from datetime import datetime
+from dateutil import parser
 import json
 from pandas import DataFrame
 from factorytx.components.dataplugins.resource import Resource
@@ -50,6 +53,7 @@ class RDP1Payload(Resource):
             try:
                 log_id = log['_id']
                 del log['_id']
+                log['timestamp'] = log['timestamp']
                 if original_content:
                     content_type = original_content
                 else:
@@ -62,7 +66,6 @@ class RDP1Payload(Resource):
                 print("The exception to sslog formatting is", e)
                 raise
         return new_logs 
-
 
     @property
     def basename(self):

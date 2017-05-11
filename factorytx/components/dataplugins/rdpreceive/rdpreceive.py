@@ -15,4 +15,3 @@ component_manger = component_manager()
 class RDPReceive(ServerPlugin):
 
     logname = 'RDPReceive'
-

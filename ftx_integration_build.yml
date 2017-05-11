@@ -13,6 +13,8 @@ volumes:
         driver: local
     pip-cache:
         driver: local
+    data-accounting-volume:
+        driver: local
 
 services:
     factorytx_send:
@@ -28,6 +30,7 @@ services:
         volumes:
             # - ./factorytx/pipelines/conf.d/int_send:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
             - ./:/opt/sightmachine/factorytx/
+            - data-accounting-volume:/var/status/factorytx
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - send-log-data-volume:/var/log/sightmachine/factorytx/
             - pip-cache:/root/.cache/pip/
