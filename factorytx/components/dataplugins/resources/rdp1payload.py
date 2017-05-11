@@ -11,6 +11,7 @@ class RDP1Payload(Resource):
         self.mtime = data[0]
         self.data_name = payload['data']
         self.poll_name = payload['poll']
+        self.headers = payload['headers']
         with open(os.path.join(payload['path'], payload['headers']), 'r') as f:
             json_data = json.loads(f.read())
             print("Found the RDP headers %s.", json_data)
@@ -28,6 +29,10 @@ class RDP1Payload(Resource):
     def load_resource(self):
         with open(os.path.join(self.path, self.payload['data']), 'rb') as f:
             rawbody = json.loads(f.read())
+        with open(os.path.join(self.path, self.payload['headers']), 'rb') as f:
+            headers = json.loads(f.read())
+        print("THE HEADERS are %s", headers)
+        capture_time = headers['Capture_Time']
         if self.binaryattachment:
             binary = self.binaryattachment
             original_file = self.original_filename
@@ -36,11 +41,11 @@ class RDP1Payload(Resource):
             binary = False
             original_file = False
             original_content = False
-        sslogs = self.format_sslogs(rawbody)
+        sslogs = self.format_sslogs(rawbody, capture_time, original_content)
         print("THE FIRST log is %s", [x for x in sslogs.items()][0])
         return sslogs, binary, original_file, original_content
 
-    def format_sslogs(self, rawlogs, original_content=False):
+    def format_sslogs(self, rawlogs, capture_time, original_content=False):
         new_logs = {}
         for key in rawlogs:
             log = rawlogs[key]
@@ -52,7 +57,8 @@ class RDP1Payload(Resource):
                 else:
                     content_type = None
                 log_data = log
-                sslog = {'_id': log_id, 'content_type': content_type, 'data': log_data}
+                sslog = {'_id': log_id, 'content_type': content_type, 'data': log_data,
+                         'capturerecords': [{'capturetime': capture_time, 'hostname': self.poll_name}]}
                 new_logs[key] = sslog
             except Exception as e:
                 print("The exception to sslog formatting is", e)

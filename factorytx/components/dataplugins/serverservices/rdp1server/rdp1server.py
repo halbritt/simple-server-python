@@ -53,6 +53,7 @@ class RDP1Server:
                 if not sslog:
                     body = [{}]
                 else:
+                    capture_time = time.time()
                     body = [sslog]
                 rawbody = sslog
             except Exception as e:
@@ -63,6 +64,7 @@ class RDP1Server:
             cl = cherrypy.request.headers['Content-Length']
             rawbody = cherrypy.request.body.read(int(cl))
             body = json.loads(rawbody)
+            capture_time = time.time()
             print("The len/body of the payload is", len(body), body[[x for x in body][-1]])
             last_id = body[[x for x in body][-1]]
             valid_count = len(body)
@@ -75,6 +77,7 @@ class RDP1Server:
             with open(os.path.join(self.data_store, file_name + 'headers'), 'w') as f:
                 print("Persisting the headers")
                 headers = cherrypy.request.headers
+                headers['capture_time'] = capture_time
                 if orig_filename:
                     headers['original_filename'] = orig_filename
                     headers['original_content_type'] = orig_content
