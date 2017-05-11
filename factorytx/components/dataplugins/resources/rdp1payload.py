@@ -31,7 +31,6 @@ class RDP1Payload(Resource):
             rawbody = json.loads(f.read())
         with open(os.path.join(self.path, self.payload['headers']), 'rb') as f:
             headers = json.loads(f.read())
-        print("THE HEADERS are %s", headers)
         capture_time = headers['Capture_Time']
         if self.binaryattachment:
             binary = self.binaryattachment
@@ -42,7 +41,6 @@ class RDP1Payload(Resource):
             original_file = False
             original_content = False
         sslogs = self.format_sslogs(rawbody, capture_time, original_content)
-        print("THE FIRST log is %s", [x for x in sslogs.items()][0])
         return sslogs, binary, original_file, original_content
 
     def format_sslogs(self, rawlogs, capture_time, original_content=False):
