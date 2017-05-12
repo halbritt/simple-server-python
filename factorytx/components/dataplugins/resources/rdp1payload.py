@@ -80,7 +80,19 @@ class RDP1Payload(Resource):
                self.data_name == other.data_name
 
     def __lt__(self, other):
-        return float(self.mtime) + hash(self.data_name) < float(other.mtime) + hash(other.data_name)
+        UNIX_EPOCH = datetime(1970, 1, 1)
+        try:
+                selftime = datetime.strptime(self.mtime, '%Y-%m-%dT%H:%M:%S.%f')  # implicitly UTC
+        except ValueError:
+                selftime = datetime.strptime(self.mtime, '%Y-%m-%dT%H:%M:%S')
+        try:
+                othertime = datetime.strptime(other.mtime, '%Y-%m-%dT%H:%M:%S.%f')  # implicitly UTC
+        except ValueError:
+                othertime = datetime.strptime(other.mtime, '%Y-%m-%dT%H:%M:%S')
+
+        self_ms = (selftime - UNIX_EPOCH).total_seconds()
+        other_ms = (othertime - UNIX_EPOCH).total_seconds()
+        return self_ms + hash(self.data_name) < other_ms + hash(other.data_name)
 
     def __hash__(self):
         return hash((self.data_name, self.poll_name, self.mtime, self.path))
