@@ -59,8 +59,12 @@ class RDP1Payload(Resource):
                 else:
                     content_type = None
                 log_data = log
-                sslog = {'_id': log_id, 'content_type': content_type, 'data': log_data,
-                         'capturerecords': [{'capturetime': capture_time, 'hostname': self.poll_name}]}
+                try:
+                        dt = datetime.strptime(capture_time[0], '%Y-%m-%dT%H:%M:%S.%f')
+                except ValueError:
+                        dt = datetime.strptime(capture_time[0], '%Y-%m-%dT%H:%M:%S')
+                sslog = {'_id': objectid.ObjectId(log_id), 'content_type': content_type, 'data': log_data,
+                         'capturerecords': [{'capturetime': dt, 'hostname': self.poll_name}]}
                 new_logs[key] = sslog
             except Exception as e:
                 print("The exception to sslog formatting is", e)

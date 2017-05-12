@@ -84,7 +84,6 @@ class RemoteDataPost(BaseTX):
         else:
             filetuple = ('p.tmp', payload, 'application/octet-stream', {'Transfer-Encoding': 'gzip'})
         multipart_form_data = {'sslog': filetuple}
-        self.log.debug("Going to put now with the setup %s", setup)
         try:
             resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'])
             status_code = resp.status_code

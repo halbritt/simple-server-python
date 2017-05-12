@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 import shelve
+import pickle
 from datetime import timedelta
 
 from bson import ObjectId
@@ -140,11 +141,17 @@ class DataPluginAbstract(object):
             content_type = None
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
+        raw_records = True
         try:
             json_data = records.to_json()
+            raw_records = False
         except AttributeError as e:
             self.log.info("We are working with raw records")
-            json_data = json.dumps(records)
+        if raw_records:
+            try:
+                json_data = json.dumps(records)
+            except Exception as e:
+                self.log.info("The exception is %s, trying to pickle sslogs", e)
         log.info("The json data has been dumped")
         if not os.path.exists(self.outputdirectory):
             os.makedirs(self.outputdirectory)
@@ -157,12 +164,15 @@ class DataPluginAbstract(object):
         tmp_fname = fname + '.jsontemp'
         if os.name == 'nt':
             fname = fname.replace(":", "_")
-
         try:
             with open(tmp_fname, 'w') as f:
                 f.write(json_data)
             # rename .jsontemp to .sm.json
             os.rename(tmp_fname, dst_fname)
+        except UnboundLocalError as e:
+            self.log.info("Pickling the data rather than dumping json.")
+            with open(tmp_fname, 'wb') as f:
+                pickle.dump(records, f)
         except Exception as e:
             log.error('Failed to save data into {} {} {}'.format(
                 self.outputdirectory, fname, e))

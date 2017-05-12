@@ -1,4 +1,5 @@
 import multiprocessing
+import pickle
 import time
 import os
 import sys
@@ -159,10 +160,15 @@ class TXAbstract(object):
         """
         log.info("Persisting the frame %s", frame_id)
         path = os.path.join(self.tx_persistence_location, str(frame_id))
-        with open(path, 'w') as f:
-            log.info("Writing to the path %s", path)
-            jsn = json.dumps(dataframe)
-            f.write(jsn)
+        try:
+            with open(path, 'w') as f:
+                log.info("Writing to the path %s", path)
+                jsn = json.dumps(dataframe)
+                f.write(jsn)
+        except UnicodeDecodeError as e:
+            with open(path, 'wb') as f:
+                log.info("Pickling to the path %s", path)
+                pkl = pickle.dump(dataframe, f)
         self.tx_ref[frame_id] = {'confirmation':False, 'frame_path':path}
         self.out_pipe[frame_id] = False
         log.info("Persisted the frame and registered it with my references")
