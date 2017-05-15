@@ -165,7 +165,7 @@ class TXAbstract(object):
                 log.info("Writing to the path %s", path)
                 jsn = json.dumps(dataframe)
                 f.write(jsn)
-        except UnicodeDecodeError as e:
+        except Exception as e:
             with open(path, 'wb') as f:
                 log.info("Pickling to the path %s", path)
                 pkl = pickle.dump(dataframe, f)
