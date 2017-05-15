@@ -350,6 +350,7 @@ class DataPluginAbstract(object):
                         self.log.error("The frame %s wansn't persisted or possibly processed.")
                     for poll in self.pollingservice_objs:
                         self.log.info("Found the polling service %s", poll)
+                        poll.remove_resource(frame_id)
             elif not 'transmission_time' in piece[1] or time.time() - piece[1]['transmission_time'] < 120:
                 self.log.info("This piece has been recently transmitted, and will not be retransmitted now: %s", piece[0])
             else:
