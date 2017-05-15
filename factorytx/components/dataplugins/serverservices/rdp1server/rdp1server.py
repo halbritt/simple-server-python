@@ -109,5 +109,5 @@ class RDP1Server:
         time_now = datetime.utcnow().isoformat()
         length = headers['Content-Length']
         key_name = headers['X-Sm-Api-Key']
-        final_name = ':'.join([str(time_now), length, key_name[:min(10, len(key_name))], '.' + self.logname])
+        final_name = '--'.join([str(time_now), length, key_name[:min(10, len(key_name))], '.' + self.logname])
         return final_name

@@ -10,7 +10,7 @@ class RDP1Payload(Resource):
 
     def __init__(self, payload):
         print("making an RDP payload from %s", payload)
-        data = payload['data'].split(':')
+        data = payload['data'].split('--')
         self.mtime = data[0]
         self.data_name = payload['data']
         self.poll_name = payload['poll']

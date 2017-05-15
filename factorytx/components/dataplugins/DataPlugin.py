@@ -336,15 +336,20 @@ class DataPluginAbstract(object):
                 self.log.debug("The piece %s has been scrubbed", frame_id)
             elif frame_id in self.in_pipe:
                 self.log.info("The piece %s has been recieved from the transform, cleaning now", frame_id)
-                confirm = self.cleanup_frame(frame_id)
-                if confirm:
-                    self.log.info("Scrubbed the persistence for the frame %s", frame_id)
-                    frame_info['cleaned'] = time.time()
-                    self.tx_dict[frame_id] = frame_info
-                elif confirm == False:
-                    self.log.warn("This frame seems to have been cleaned already %s", frame_id)
-                else:
-                    self.log.error("The frame %s wansn't persisted or possibly processed.")
+                tx_confirm = self.in_pipe[frame_id]
+                if tx_confirm:
+                    self.log.info("Confirmed the transmission of the id %s, cleaning now.", frame_id)
+                    confirm = self.cleanup_frame(frame_id)
+                    if confirm:
+                        self.log.info("Scrubbed the persistence for the frame %s", frame_id)
+                        frame_info['cleaned'] = time.time()
+                        self.tx_dict[frame_id] = frame_info
+                    elif confirm == False:
+                        self.log.warn("This frame seems to have been cleaned already %s", frame_id)
+                    else:
+                        self.log.error("The frame %s wansn't persisted or possibly processed.")
+                    for poll in self.pollingservice_objs:
+                        self.log.info("Found the polling service %s", poll)
             elif not 'transmission_time' in piece[1] or time.time() - piece[1]['transmission_time'] < 120:
                 self.log.info("This piece has been recently transmitted, and will not be retransmitted now: %s", piece[0])
             else:

@@ -42,6 +42,16 @@ class RDP1(PollingServiceBase):
     def return_resource_class(self):
         return RDP1Payload
 
+    def remove_resource(self, resource_id):
+        if resource_id in self.resources:
+            print("Removing the resource from persistence with id %s", resource_id)
+            remove_path = os.path.join(self.data_store, resource_id)
+            if os.path.exists(remove_path):
+                print("Found the resource and removing it from %s", self.data_store)
+                os.remove(remove_path)
+            else:
+                print("Couldn't find the path to remove for resource %s", resource_id)
+
     def get_all_resources(self):
         new_resources = []
         print("The resource keys are", [x for x in self.resource_keys.keys()])
