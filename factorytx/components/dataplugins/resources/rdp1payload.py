@@ -53,7 +53,7 @@ class RDP1Payload(Resource):
             try:
                 log_id = log['_id']
                 del log['_id']
-                log['timestamp'] = log['timestamp']
+                log['timestamp'] = parser.parse(log['timestamp'])
                 if original_content:
                     content_type = original_content
                 else:
