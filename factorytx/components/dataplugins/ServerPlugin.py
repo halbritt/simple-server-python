@@ -90,7 +90,56 @@ class ServerPlugin(DataPlugin):
         processed = []
         for resource in resources:
             processed += [(resource[0], resource[1].load_resource())]
-        return processed
+        return self.aggregate_logs(processed)
+
+    def aggregate_logs(self, processed):
+        log_ids = []
+        agg_logs = []
+        running_size = 0
+        running_logs = 0
+        max_size = int(self.max_size)
+        max_logs = int(self.max_logs)
+        log_ids = []
+        log_data = {}
+        for logs in processed:
+            self.log.info("Aggregating the logs corresponding to id %s", logs[0])
+            num_logs = len(logs[1][0])
+            self.log.info("The number of logs that we will process is %s", num_logs)
+            sslogs = logs[1][0]
+            self.log.info("The first log is %s", [x for x in logs[1][0].items()][0])
+            attachment_info = logs[1][1]
+            if attachment_info['binary']:
+                if attachment_info['original_size'] > max_size or attachment_info['original_size'] > running_size:
+                    if log_ids:
+                        yield (log_ids, log_data)
+                        log_ids = []
+                        log_data = {}
+                        running_size = 0
+                        running_logs = 0
+                    for time in sslogs:
+                        log_dic = sslogs[time]
+                        log_dic['attachment_info'] = attachment_info
+                        if attachment_info['original_size'] > max_size:
+                            self.log.error("The attachment size %s is bigger than the max aggregate size %s, appending singleton!",
+                                           attachment_info['original_size'], max_size)
+                            yield ([logs[0]], log_dic)
+                        else:
+                            log_ids.append(logs[0])
+                            log_data.update({time: log_dic})
+                            running_size += attachment_info['original_size']
+                else:
+                    running_size += attachment_info['original_size']
+                    log_join
+            elif num_logs + running_logs > max_logs:
+                self.log.warn("The number of sslogs will put the max size overlimit, recreating")
+                yield (log_ids, log_data)
+            else:
+                log_data.update(sslogs)
+                running_logs += num_logs
+                log_ids.append(logs[0])
+        if log_ids:
+            self.log.info("Appending the ids %s", log_ids)
+            yield (log_ids, log_data)
 
     def start_server(self):
         print("The servers vars are", vars(self))

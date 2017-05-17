@@ -11,7 +11,7 @@ properties:
     description: Poll time in seconds
     type: number
     minimum: 1
-    default: 5
+    default: 1
   actions:
     type: array
     items:

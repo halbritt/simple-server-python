@@ -42,7 +42,8 @@ class RDP1Server:
                 orig_content = metadata.headers['Content-Type']
                 valid_count = 1
                 size = 0
-                with open(os.path.join(self.data_store, file_name + 'binaryattachment'), 'wb') as out:
+                attachment_path = os.path.join(self.data_store, file_name + 'binaryattachment')
+                with open(attachment_path, 'wb') as out:
                     while True:
                         data = ipcfile.file.read(8192)
                         if not data:
@@ -50,6 +51,7 @@ class RDP1Server:
                         out.write(data)
                         size += len(data)
                     print("Finished uploading the binary attachment of size %s", size)
+                orig_size = os.path.getsize(attachment_path)
                 if not sslog:
                     body = [{}]
                 else:
@@ -81,6 +83,7 @@ class RDP1Server:
                 if orig_filename:
                     headers['original_filename'] = orig_filename
                     headers['original_content_type'] = orig_content
+                    headers['original_size'] = orig_size
                 headers = json.dumps(cherrypy.request.headers)
                 f.write(headers)
             response_dic = {"valid_count": valid_count, "last_reject_id": None, "reject_count": 0,

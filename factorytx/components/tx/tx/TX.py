@@ -92,7 +92,7 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame, binary=None) -> bool:
+    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
@@ -102,11 +102,6 @@ class TXAbstract(object):
         log.info("The dataframe has been saved")
         passed_all = True
         frame_info = self.tx_ref[frame_id]
-        if binary:
-            log.info("The binary is %s", binary)
-            if 'attachment' in dataframe:
-                dataframe['attachment']['content'] = binary
-            dataframe = [dataframe]
         print("The tx objects are", self.tx_objs)
         for tx in self.tx_objs:
             print("The tx data reference is %s", tx.data_reference)
@@ -197,10 +192,15 @@ class TXAbstract(object):
 
     def load_binary(self, attachment):
         self.log.info("The attachment is %s", attachment)
-        with open(attachment, 'rb') as f:
-            attachment = f.read()
-        self.log.info("Loaded the attachment %s", attachment)
-        return attachment
+        formatted = {}
+        with open(attachment['binary'], 'rb') as f:
+            binary_attach = f.read()
+        self.log.info("Loaded the attachment %s", binary_attach)
+        formatted['content'] = binary_attach
+        formatted['content_type'] = attachment['original_content']
+        formatted['content_encoding'] = 'raw'
+        formatted['filename'] = attachment['original_file']
+        return formatted
 
     def run(self) -> ():
         """ Proceeds in the loop of pulling off txes and transmitting them.
@@ -234,13 +234,19 @@ class TXAbstract(object):
                     log.info("Getting Next TX")
                     res = self.get_next_tx()
                     log.info("The first tx arg is %s", res['frame_id'])
-                    if res['binary_attachment']:
-                        binary = self.load_binary(res['binary_attachment'])
-                    else:
-                        binary = None
+                    logs = res['frame']
+                    log.info("The sslogs are of length %s", len(logs))
+                    print("The logs are %s", logs)
+                    for sslog in logs:
+                        sslog_data = logs[sslog]
+                        log.info("Looking for attachment information in the log %s", sslog_data)
+                        if 'attachment_info' in sslog_data:
+                            log.info("Loading and attching a binary attachment for %s", sslog_data['attachment_info'])
+                            sslog_data['attachment'] = self.load_binary(sslog_data['attachment_info'])
+                            del sslog_data['attachment_info']
                     tx_done = False
                     while not tx_done:
-                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'], binary)
+                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
                         if not tx_status:
                             log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
                         else:

@@ -21,6 +21,7 @@ class RDP1Payload(Resource):
             if 'Original_Filename' in json_data:
                 self.original_filename = json_data['Original_Filename']
                 self.original_content_type = json_data['Original_Content_Type']
+                self.original_size = json_data['Original_Size']
         if 'binaryattachment' in payload:
             self.binaryattachment = os.path.join(payload['path'], payload['binaryattachment'])
         else:
@@ -30,24 +31,30 @@ class RDP1Payload(Resource):
         self.name = self.encode('utf8')
 
     def load_resource(self):
+        attachment_dic = {}
         with open(os.path.join(self.path, self.payload['data']), 'rb') as f:
             rawbody = json.loads(f.read())
         with open(os.path.join(self.path, self.payload['headers']), 'rb') as f:
             headers = json.loads(f.read())
         capture_time = headers['Capture_Time']
         if self.binaryattachment:
-            binary = self.binaryattachment
-            original_file = self.original_filename
-            original_content = self.original_content_type
+            attachment_dic['binary'] = self.binaryattachment
+            attachment_dic['original_file'] = self.original_filename
+            attachment_dic['original_content'] = self.original_content_type
+            attachment_dic['original_size'] = self.original_size
+            rawbody = {rawbody['timestamp']: rawbody}
         else:
-            binary = False
-            original_file = False
-            original_content = False
-        sslogs = self.format_sslogs(rawbody, capture_time, original_content)
-        return sslogs, binary, original_file, original_content
+            attachment_dic['binary'] = False
+            attachment_dic['original_file'] = False
+            attachment_dic['original_content'] = False
+            attachment_dic['original_size'] = False
+            capture_time = capture_time[0]
+        sslogs = self.format_sslogs(rawbody, capture_time, attachment_dic['original_content'])
+        return sslogs, attachment_dic
 
     def format_sslogs(self, rawlogs, capture_time, original_content=False):
         new_logs = {}
+        print("The logs are %s", rawlogs)
         for key in rawlogs:
             log = rawlogs[key]
             try:
@@ -60,9 +67,9 @@ class RDP1Payload(Resource):
                     content_type = None
                 log_data = log
                 try:
-                        dt = datetime.strptime(capture_time[0], '%Y-%m-%dT%H:%M:%S.%f')
+                        dt = datetime.strptime(capture_time, '%Y-%m-%dT%H:%M:%S.%f')
                 except ValueError:
-                        dt = datetime.strptime(capture_time[0], '%Y-%m-%dT%H:%M:%S')
+                        dt = datetime.strptime(capture_time, '%Y-%m-%dT%H:%M:%S')
                 sslog = {'_id': objectid.ObjectId(log_id), 'content_type': content_type, 'data': log_data,
                          'capturerecords': [{'capturetime': dt, 'hostname': self.poll_name}]}
                 new_logs[key] = sslog

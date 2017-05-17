@@ -133,12 +133,6 @@ class DataPluginAbstract(object):
 
     def save_json(self, record_id, records):
         new_records = []
-        if type(records) == tuple:
-            records, binary, filename, content_type = records
-        else:
-            binary = False
-            filename = None
-            content_type = None
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
@@ -179,7 +173,7 @@ class DataPluginAbstract(object):
             raise
         else:
             self.log.info('Saved data into {}'.format(fname))
-        self.register_data_frame(record_id, guid, dst_fname, binary, filename, content_type)
+        self.register_data_frame(record_id, guid, dst_fname)
         new_records.append((record_id, guid, records))
         return new_records
 
@@ -223,7 +217,7 @@ class DataPluginAbstract(object):
                         ''.format(self.reconnect_attempts))
 
     def emit_records(self, records):
-        log.info("Emitting %s records for the plugin %s", len(records), self.logname)
+        log.info("Emitting %s records for the plugin %s", len(records[1]), self.logname)
         log.debug("The record info is %s", records[0])
         records_id, records = records
         self.log.info("Persisting %s records in JSON", len(records))
@@ -232,7 +226,7 @@ class DataPluginAbstract(object):
         if len(records) > 0:
             for record in records:
                 self.log.info("Passing the records with id %s onto the next component", record[0])
-                self.push_frame(record[0][1], record[1], record[2])
+                self.push_frame(record[0][0][1], record[1], record[2])
         else:
             self.log.info("There are no records to forward")
 
@@ -365,18 +359,10 @@ class DataPluginAbstract(object):
         if self.validate_frame(frame):
             frame_data = self.tx_dict[frame_id]
             log.info("Transmitting the dataframe %s", frame_data)
-            if frame_data['binary_attachment']:
-                log.info("Found a binary_attachment for the frame %s at %s.", frame_id,
-                         frame_data['binary_attachment'])
-                log.debug("Attachment info: filename: %s, content_encoding: %s, content_type %s",
-                          frame_data['original_file'], 'raw', frame_data['content_type'])
-                attach_dic = {'filename': frame_data['original_file'], 'content_encoding': 'raw',
-                              'content_type': frame_data['content_type']}
-                frame['attachment'] = attach_dic
             frame_data['transmission_time'] = time.time()
             self.tx_dict[frame_id] = frame_data
             log.info("Marked the time for %s", frame_id)
-            self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame, 'binary_attachment':frame_data['binary_attachment']})
+            self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame})
             log.info("Pushed out a new dataframe with %s indexes.", len(frame))
         else:
             log.info("Failed to validate frame")
@@ -405,12 +391,11 @@ class DataPluginAbstract(object):
         log.info("Processed %s resources while encountering %s errors.", cnt, errors)
         return processed
 
-    def register_data_frame(self, resource_id, data_frame_id, fname, binary=False, original_file=None, content_type=None):
-        self.tx_dict[data_frame_id] = {'registration_time':time.time(), 'resource_id':resource_id[0],
-                                       'datasource':resource_id[1], 'm_time':resource_id[2],
-                                       'frame_path': fname, 'binary_attachment':binary,
-                                       'original_file': original_file, 'content_type': content_type}
-        self.log.info("Sucessfuly registered the resource %s to chunk %s", resource_id, data_frame_id)
+    def register_data_frame(self, resource_id, data_frame_id, fname):
+        log.info("Registering the dataframe with resource id %s", resource_id)
+        self.tx_dict[data_frame_id] = {'registration_time':time.time(), 'resource_id':[x[0] for x in resource_id],
+                                       'datasource':resource_id[0][1], 'frame_path': fname}
+        self.log.info("Sucessfuly registered the resources %s to chunk %s", resource_id, data_frame_id)
 
     def over_time(self, name):
         if name in self.resource_dict:
@@ -453,12 +438,12 @@ class DataPluginAbstract(object):
                 self.log.info("Registered the records, now processing")
                 processed = self.process_resources(resources)
                 self.log.info("Finished processing the new records")
-                if len(processed) > 0:
-                    print("Emitting some new records of length %s", len(processed))
-                    for proc in processed:
-                        self.emit_records(proc)
-                else:
-                    self.log.warn("No records found on this run")
+                found_records = False
+                for proc in processed:
+                    found_records = True
+                    self.emit_records(proc)
+                if not found_records:
+                    log.info("Found no records to process on this run")
                 self.log.info("%s: Finished emitting records, checking for old", self.host)
                 self.check_and_emit_old_records()
             except Exception as e:

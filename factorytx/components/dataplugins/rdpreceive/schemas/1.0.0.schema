@@ -11,3 +11,9 @@ properties:
   poll_rate:
     type: integer
     default: 5
+  max_size:
+    type: integer
+    default: 3000000
+  max_logs:
+    type: integer
+    default: 1000
