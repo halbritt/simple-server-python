@@ -10,7 +10,7 @@ properties:
     default: 80
   poll_rate:
     type: integer
-    default: 5
+    default: 30
   max_size:
     type: integer
     default: 3000000

@@ -129,7 +129,11 @@ class ServerPlugin(DataPlugin):
                             running_size += attachment_info['original_size']
                 else:
                     running_size += attachment_info['original_size']
-                    log_join
+                    for time in sslogs:
+                        log_dic = sslogs[time]
+                        log_dic['attachment_info'] = attachment_info
+                        log_ids.append(logs[0])
+                        log_data.update({time: log_dic})
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
                 yield (log_ids, log_data)
