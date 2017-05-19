@@ -1,8 +1,9 @@
 version: '3'
 
 networks:
-    factorytx-net:
-        driver: bridge
+  factorytx-net:
+    external:
+      name: smtool_ma-net
 
 volumes:
     send-log-data-volume:
@@ -33,23 +34,6 @@ services:
             - data-accounting-volume:/var/status/factorytx
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - send-log-data-volume:/var/log/sightmachine/factorytx/
-            - pip-cache:/root/.cache/pip/
-
-    factorytx_receive:
-        container_name: factorytx_receive
-        hostname: factorytx_receive
-        image: sightmachine/factorytx
-        networks:
-            - factorytx-net
-        build:
-            context: /opt/sightmachine/factorytx
-            dockerfile: Dockerfile
-        tty: true
-        volumes:
-            # - ./factorytx/pipelines/conf.d/int_receive:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
-            - ./:/opt/sightmachine/factorytx/
-            - data-buffer-volume:/var/spool/sightmachine/factorytx/
-            - receive-log-data-volume:/var/log/sightmachine/factorytx/
             - pip-cache:/root/.cache/pip/
 
     simpledata:

@@ -189,7 +189,6 @@ class TXAbstract(object):
         except Exception as e:
             self.log.error("There was a problem with %s", e)
 
-
     def load_binary(self, attachment):
         self.log.info("The attachment is %s", attachment)
         formatted = {}
