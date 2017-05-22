@@ -181,11 +181,9 @@ class TXAbstract(object):
             self.log.error("There was a problem with %s", e)
 
     def load_binary(self, attachment):
-        self.log.info("The attachment is %s", attachment)
         formatted = {}
         with open(attachment['binary'], 'rb') as f:
             binary_attach = f.read()
-        self.log.info("Loaded the attachment %s", binary_attach)
         formatted['content'] = binary_attach
         formatted['content_type'] = attachment['original_content']
         formatted['content_encoding'] = 'raw'
