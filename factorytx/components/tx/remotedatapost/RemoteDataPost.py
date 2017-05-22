@@ -6,6 +6,7 @@ import base64
 import bson
 import zlib
 import sys
+from datetime import datetime
 from logging import getLogger
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
@@ -31,7 +32,7 @@ class RemoteDataPost(BaseTX):
         super(RemoteDataPost, self).loadParameters(schema, conf)
         self.request_setup = self.setup_request()
 
-    def TX(self, data):
+    def TX(self, data, size):
         self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
         if type(data) == dict:
             data = [data]
@@ -44,10 +45,13 @@ class RemoteDataPost(BaseTX):
             txed = False
             while not txed:
                 self.log.info("Submitting a payload")
+                tx_init = datetime.utcnow().isoformat()
                 ship = self.send_http_request(payload)
+                tx_finish = datetime.utcnow().isoformat()
+                self.log.info("The transmission start is %s and finish is %s", tx_init, tx_finish)
                 if ship['code'] < 200 or ship['code'] >= 300:
-                    self.log.info("Failed to tx the data because of a status code %s from the server.",
-                                  ship['code'])
+                    self.log.info("Failed to tx the data of size %s because of a status code %s from the server.",
+                                  size, ship['code'])
                     self.log.info('Will retry shipping the payload again.')
                     time.sleep(5)
                 else:

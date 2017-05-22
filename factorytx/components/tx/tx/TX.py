@@ -84,7 +84,7 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> bool:
+    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame, size=0) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
@@ -101,7 +101,7 @@ class TXAbstract(object):
             if datasource in tx.data_reference:
                 data = tx.data_reference[datasource]
                 log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
-                confirmation = tx.TX(dataframe)
+                confirmation = tx.TX(dataframe, size)
                 if confirmation:
                     log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
                 else:
@@ -223,15 +223,18 @@ class TXAbstract(object):
                     log.info("The first tx arg is %s", res['frame_id'])
                     logs = res['frame']
                     log.info("The sslogs are of length %s", len(logs))
+                    running_size = 0
                     for sslog in logs:
                         sslog_data = logs[sslog]
                         if 'attachment_info' in sslog_data:
                             log.info("Loading and attching a binary attachment for %s", sslog_data['attachment_info'])
                             sslog_data['attachment'] = self.load_binary(sslog_data['attachment_info'])
+                            running_size += sslog_data['attachment_info']['original_size']
                             del sslog_data['attachment_info']
                     tx_done = False
                     while not tx_done:
-                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
+                        self.log.info("Transmitting tx with running size %s", running_size)
+                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'], running_size)
                         if not tx_status:
                             log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
                         else:
