@@ -53,6 +53,7 @@ class RDP1(PollingServiceBase):
                     os.remove(remove_path + 'headers')
                 if os.path.exists(remove_path + 'binaryattachment'):
                     os.remove(remove_path + 'binaryattachment')
+                del self.resources[resource_id]
                 return True
             else:
                 print("Couldn't find the path to remove for resource %s", resource_id)
@@ -60,7 +61,7 @@ class RDP1(PollingServiceBase):
 
     def get_all_resources(self):
         new_resources = []
-        print("The resource keys are", [x for x in self.resource_keys.keys()])
+        print("The resource keys are", [x for x in self.resources.keys()])
         for dirs, paths, filename in os.walk(self.data_store):
             if paths: continue
             print("Found the entry %s", dirs, paths, filename)
@@ -74,7 +75,7 @@ class RDP1(PollingServiceBase):
                     if binary_name in filename:
                         resource['binaryattachment'] = binary_name
                     resource = RDP1Payload(resource)
-                    if resource.name in self.resource_keys:
+                    if resource.name in self.resources:
                         continue
                     new_resources.append(resource)
         return sorted(new_resources)

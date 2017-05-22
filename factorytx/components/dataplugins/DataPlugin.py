@@ -432,6 +432,10 @@ class DataPluginAbstract(object):
         for key in completed_resources:
             self.log.info("Deleting the key %s from persistence", key)
             del self.in_pipe[key]
+            resource_data = self.tx_dict[key]['resource_id']
+            for resource_id in resource_data:
+                if resource_id in self.resource_dict:
+                    del self.resource_dict[resource_id]
             del self.tx_dict[key]
 
     def run(self):

@@ -65,10 +65,7 @@ class PollingServiceBase(metaclass=ABCMeta):
             conf['name'] = str(uuid4())[:8]
         resource_path = os.path.join(self.resource_dict_location, conf['name'])
         print("Creating the resource dictionaries")
-        self.resources = shelve.open(resource_path + "resource-reference")
-        self.resource_keys = shelve.open(resource_path +'resource-keys')
-        print("The resource keys are %s", [x for x in self.resource_keys.keys()])
-        self.datasource_keys = shelve.open(resource_path + "datasource-keys")
+        self.resources = {}
         self.last_registered = None
 
     def register_resource(self, resource):
@@ -78,11 +75,8 @@ class PollingServiceBase(metaclass=ABCMeta):
         uid = str(uuid4())
         print("Registering %s, with name %s", resource, resource.name)
         print("The resource dictionary is %s", self.resources)
-        print("The resource keys are", self.resource_keys)
         resource_encoding = resource.encode('utf8')
         self.resources[resource_encoding] = resource_encoding
-        self.resource_keys[resource.name] = resource_encoding
-        self.datasource_keys[uid] = self.name
         return resource, resource_encoding, self.name, resource.mtime
 
     def get_resource(self, uid):
@@ -174,11 +168,10 @@ class PollingServiceBase(metaclass=ABCMeta):
         all_resources = [x for x in self.get_all_resources()]
         self.log.info("The resources that are available number %s.", len(all_resources))
         for resource in self.get_all_resources():
-            self.log.info("The resource keys are %s", [x for x in self.resource_keys])
-            if not resource in self.resource_keys:
+            if not resource in self.resources:
                 unregistered.append(resource)
             else:
-                log.debug("The resource %s is registered with key %s and item %s", resource, self.resource_keys[resource], self.resources[self.resource_keys[resource]])
+                log.debug("The resource %s is registered with key %s and item %s", resource, self.resources[resource])
         self.log.info("The resources that are available and unregistered are %s", unregistered)
         return unregistered
 

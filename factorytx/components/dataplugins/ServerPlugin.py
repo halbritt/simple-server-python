@@ -68,7 +68,7 @@ class ServerPlugin(DataPlugin):
         for resource_id, resource_enc in registered:
             if resource_id not in self.resource_dict:
                 self.log.info("The resource %s is not registered here.", resource_id)
-                arguments = resource_enc.split(',')
+                arguments = resource_enc.split('--')
                 self.log.debug("The resource arguments are %s", arguments)
                 resource = self.server.return_resource_class()(*arguments)
                 unprocessed += [(resource_id, resource)]
