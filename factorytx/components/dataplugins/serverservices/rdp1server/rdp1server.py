@@ -67,7 +67,7 @@ class RDP1Server:
             rawbody = cherrypy.request.body.read(int(cl))
             body = json.loads(rawbody)
             capture_time = datetime.utcnow().isoformat(),
-            print("The len/body of the payload is", len(body), body[[x for x in body][-1]])
+            print("The len/body of the payload is", len(body))
             last_id = body[[x for x in body][-1]]
             valid_count = len(body)
         try:

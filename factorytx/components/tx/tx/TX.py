@@ -75,14 +75,6 @@ class TXAbstract(object):
             self.log.debug("The tx options are", tx_obj.options)
             self.tx_objs.append(tx_obj)
 
-    def populate_out(self) -> ():
-        """ Given my records of tx transmission, populates the out_pipe dictionary with the posted
-            txes.
-
-        """
-        for frame_id, status in self.tx_ref.items():
-            self.out_pipe[frame_id] = status
-
     def is_empty(self) -> ():
         """ Returns True exactly when my in_pipe is empty, and false otherwise. """
         return self.in_pipe.empty()
@@ -165,7 +157,6 @@ class TXAbstract(object):
                 log.info("Pickling to the path %s", path)
                 pkl = pickle.dump(dataframe, f)
         self.tx_ref[frame_id] = {'confirmation':False, 'frame_path':path}
-        self.out_pipe[frame_id] = False
         log.info("Persisted the frame and registered it with my references")
 
     @property
@@ -220,7 +211,6 @@ class TXAbstract(object):
 
         try:
             self.connect()
-            self.populate_out()
         except Exception as e:
             log.error('Failed to connect to %s', self.host)
             log.exception(e)
@@ -235,10 +225,8 @@ class TXAbstract(object):
                     log.info("The first tx arg is %s", res['frame_id'])
                     logs = res['frame']
                     log.info("The sslogs are of length %s", len(logs))
-                    print("The logs are %s", logs)
                     for sslog in logs:
                         sslog_data = logs[sslog]
-                        log.info("Looking for attachment information in the log %s", sslog_data)
                         if 'attachment_info' in sslog_data:
                             log.info("Loading and attching a binary attachment for %s", sslog_data['attachment_info'])
                             sslog_data['attachment'] = self.load_binary(sslog_data['attachment_info'])
@@ -259,10 +247,11 @@ class TXAbstract(object):
                 continue
 
             # sleep by 0.1
-            for _ in range(int(float(self.polltime) / 0.1)):
-                time.sleep(0.1)
-                if not self._running:
-                    break
+            if self.is_empty():
+                for _ in range(int(float(self.polltime) / 0.1)):
+                    time.sleep(0.1)
+                    if not self._running:
+                        break
 
 
 class TX(TXAbstract, multiprocessing.Process, DataService):

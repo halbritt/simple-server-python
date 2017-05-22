@@ -44,13 +44,19 @@ class RDP1(PollingServiceBase):
 
     def remove_resource(self, resource_id):
         if resource_id in self.resources:
-            print("Removing the resource from persistence with id %s", resource_id)
             remove_path = os.path.join(self.data_store, resource_id)
+            print("Removing the resource from persistence with id %s from %s", resource_id, remove_path)
             if os.path.exists(remove_path):
                 print("Found the resource and removing it from %s", self.data_store)
                 os.remove(remove_path)
+                if os.path.exists(remove_path + 'headers'):
+                    os.remove(remove_path + 'headers')
+                if os.path.exists(remove_path + 'binaryattachment'):
+                    os.remove(remove_path + 'binaryattachment')
+                return True
             else:
                 print("Couldn't find the path to remove for resource %s", resource_id)
+        return False
 
     def get_all_resources(self):
         new_resources = []

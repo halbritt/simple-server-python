@@ -16,4 +16,4 @@ properties:
     default: 3000000
   max_logs:
     type: integer
-    default: 1000
+    default: 1500

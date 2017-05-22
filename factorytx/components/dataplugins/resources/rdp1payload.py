@@ -9,7 +9,6 @@ from factorytx.components.dataplugins.resource import Resource
 class RDP1Payload(Resource):
 
     def __init__(self, payload):
-        print("making an RDP payload from %s", payload)
         data = payload['data'].split('--')
         self.mtime = data[0]
         self.data_name = payload['data']
@@ -17,7 +16,6 @@ class RDP1Payload(Resource):
         self.headers = payload['headers']
         with open(os.path.join(payload['path'], payload['headers']), 'r') as f:
             json_data = json.loads(f.read())
-            print("Found the RDP headers %s.", json_data)
             if 'Original_Filename' in json_data:
                 self.original_filename = json_data['Original_Filename']
                 self.original_content_type = json_data['Original_Content_Type']
@@ -54,7 +52,6 @@ class RDP1Payload(Resource):
 
     def format_sslogs(self, rawlogs, capture_time, original_content=False):
         new_logs = {}
-        print("The logs are %s", rawlogs)
         for key in rawlogs:
             log = rawlogs[key]
             try:
@@ -103,7 +100,7 @@ class RDP1Payload(Resource):
 
         self_ms = (selftime - UNIX_EPOCH).total_seconds()
         other_ms = (othertime - UNIX_EPOCH).total_seconds()
-        return self_ms + hash(self.data_name) < other_ms + hash(other.data_name)
+        return self_ms < other_ms
 
     def __hash__(self):
         return hash((self.data_name, self.poll_name, self.mtime, self.path))

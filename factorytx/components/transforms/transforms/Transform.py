@@ -191,11 +191,12 @@ class TransformAbstract(object):
                 continue
 
             # sleep by 0.1
-            print("My polltime is %s", self.polltime)
-            for _ in range(int(float(self.polltime) / 0.1)):
-                time.sleep(0.1)
-                if not self._running:
-                    break
+            if self.is_empty():
+                print("My polltime is %s", self.polltime)
+                for _ in range(int(float(self.polltime) / 0.1)):
+                    time.sleep(0.1)
+                    if not self._running:
+                        break
 
 
 class Transform(TransformAbstract, multiprocessing.Process, DataService):

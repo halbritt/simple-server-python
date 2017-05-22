@@ -72,8 +72,12 @@ class DataPluginAbstract(object):
         self.resource_dict = shelve.open(os.path.join(self.resource_dict_location,
                                                       self.resource_dict_name + 'plugin_resources'))
         self.tx_dict = shelve.open(os.path.join(self.resource_dict_location, self.resource_dict_name + 'tx-chunks'))
+        self.last_frame_keys = set()
 
     def read(self):
+        return
+
+    def remove_resource(self, resource_id):
         return
 
     def process_resource(self, resource, resource_service):
@@ -173,6 +177,7 @@ class DataPluginAbstract(object):
             raise
         else:
             self.log.info('Saved data into {}'.format(fname))
+        self.log.info("Registering the data frame %s, %s, %s", record_id, guid, dst_fname)
         self.register_data_frame(record_id, guid, dst_fname)
         new_records.append((record_id, guid, records))
         return new_records
@@ -403,6 +408,32 @@ class DataPluginAbstract(object):
                 return False
         return True
 
+    def callback_frames(self):
+        in_keys = set(self.in_pipe.keys())
+        if not in_keys:
+            return []
+        completed_resources = []
+        for key in in_keys:
+            if key in self.tx_dict:
+                todo = self.tx_dict[key]['resource_id']
+                completed = []
+                self.log.info("Found the callback info %s with key %s", self.tx_dict[key], key)
+                for resource_id in todo:
+                    trans = self.remove_resource(resource_id)
+                    if trans:
+                        completed += [resource_id]
+                    else:
+                        self.log.warn("The resource %s doesn't seem to exist along its path. ID: %s", self.tx_dict[key], resource_id)
+                        del self.in_pipe[key]
+                        del self.tx_dict[key]
+                if completed == todo:
+                    self.log.info("Sucessfully removed all callbacks associated with %s", key)
+                    completed_resources += [key]
+        for key in completed_resources:
+            self.log.info("Deleting the key %s from persistence", key)
+            del self.in_pipe[key]
+            del self.tx_dict[key]
+
     def run(self):
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
@@ -455,6 +486,7 @@ class DataPluginAbstract(object):
 
             # sleep by 0.1
             for _ in range(int(self.poll_rate / 0.1)):
+                self.callback_frames()
                 sleep(0.1)
                 if not self._running:
                     break

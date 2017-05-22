@@ -27,6 +27,10 @@ class ServerPlugin(DataPlugin):
         self.server = super(ServerPlugin, self)._load_plugin(poll_manager, server_conf)
         self.poll_rate = int(self.poll_rate)
 
+    def remove_resource(self, resource_id):
+        self.log.info("Removing the resource %s from my server", resource_id)
+        return self.server.remove_resource(resource_id)
+
     def connect(self):
         self.server.start()
 
@@ -40,7 +44,7 @@ class ServerPlugin(DataPlugin):
         self.log.info("Looking for files in the FileTransport object.")
         new_entries = self.server.poll(self.resource_dict)
         found_entries = []
-        self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
+        self.log.info('Found %d entries from polling_server', len(new_entries))
         self.log.info("The records say we have entries %s", [x for x in self.resource_dict.items()])
         for resource in new_entries:
             if resource[0][0] in self.resource_dict:
@@ -86,7 +90,6 @@ class ServerPlugin(DataPlugin):
         return unprocessed, untxed
 
     def process_resources(self, resources):
-        print("In the processing function for %s", resources)
         processed = []
         for resource in resources:
             processed += [(resource[0], resource[1].load_resource())]
@@ -106,10 +109,10 @@ class ServerPlugin(DataPlugin):
             num_logs = len(logs[1][0])
             self.log.info("The number of logs that we will process is %s", num_logs)
             sslogs = logs[1][0]
-            self.log.info("The first log is %s", [x for x in logs[1][0].items()][0])
             attachment_info = logs[1][1]
             if attachment_info['binary']:
-                if attachment_info['original_size'] > max_size or attachment_info['original_size'] > running_size:
+                if attachment_info['original_size'] > max_size or attachment_info['original_size'] > max_size - running_size:
+                    self.log.info("The resource %s goes over the running max or is itself bigger than the max size.", logs[0])
                     if log_ids:
                         yield (log_ids, log_data)
                         log_ids = []
@@ -124,10 +127,12 @@ class ServerPlugin(DataPlugin):
                                            attachment_info['original_size'], max_size)
                             yield ([logs[0]], log_dic)
                         else:
+                            self.log.info("The attachment size %s is bigger than the running size of %s", attachment_info['original_size'], running_size)
                             log_ids.append(logs[0])
                             log_data.update({time: log_dic})
                             running_size += attachment_info['original_size']
                 else:
+                    self.log.info("Appending the info in %s to the running totals", logs[0])
                     running_size += attachment_info['original_size']
                     for time in sslogs:
                         log_dic = sslogs[time]
@@ -137,7 +142,11 @@ class ServerPlugin(DataPlugin):
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
                 yield (log_ids, log_data)
+                log_ids = [logs[0]]
+                log_data = {}
+                log_data.update(sslogs)
             else:
+                self.log.info("The number of sslogs will be appended to the growing data")
                 log_data.update(sslogs)
                 running_logs += num_logs
                 log_ids.append(logs[0])
