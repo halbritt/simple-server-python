@@ -20,11 +20,10 @@ class RDP1(PollingServiceBase):
         super(RDP1, self).setup_log(logname)
         self.root_path = os.path.abspath(self.root_path)
 
-    def poll(self, persisted):
+    def poll(self):
         """ Polls my resources to try and find new unregistered resources.
 
         """
-        print("The persisted keys are", [x for x in persisted.items()])
         resource_candidates = self.get_all_resources()
         new_resources = []
         print("The resource candidates are %s.", resource_candidates)
@@ -60,12 +59,16 @@ class RDP1(PollingServiceBase):
         return False
 
     def get_all_resources(self):
-        new_resources = []
+        """ Gets all of the resources that I haven't registered previously. """
         print("The resource keys are", [x for x in self.resources.keys()])
+        new_resources = []
         for dirs, paths, filename in os.walk(self.data_store):
             if paths: continue
             print("Found the entry %s", dirs, paths, filename)
             for fle in filename:
+                if fle in self.resources:
+                    print("The resource %s has already been returned.", fle)
+                    continue
                 if fle.endswith('headers'): continue
                 header_name = fle + 'headers'
                 binary_name = fle + 'binaryattachment'
@@ -75,8 +78,6 @@ class RDP1(PollingServiceBase):
                     if binary_name in filename:
                         resource['binaryattachment'] = binary_name
                     resource = RDP1Payload(resource)
-                    if resource.name in self.resources:
-                        continue
                     new_resources.append(resource)
         return sorted(new_resources)
 

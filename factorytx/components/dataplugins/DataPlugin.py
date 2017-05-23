@@ -29,10 +29,6 @@ except:
     import json
 log = logging.getLogger("Data Plugin")
 
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
-
-
 class DataPluginAbstract(object):
     """
     Data-plugin is a framework for building plugins that can handle
@@ -103,16 +99,6 @@ class DataPluginAbstract(object):
 
     def _getSource(self):
         return self.source if hasattr(self, 'source') else "Unknown"
-
-    def _makeShareData(self, data):
-        global_manager_dict = global_manager.get_dict()
-
-        global_manager_dict[self.share] = data['fieldvalues']
-        log.debug("global_manager_dict['{}']".format(self.share))
-
-    def save_share(self, records):
-        if records:
-            self._makeShareData(self.process(records[-1]))
 
     def encrypt(self, records):
         # TODO: Complete for at rest encryption
@@ -235,79 +221,11 @@ class DataPluginAbstract(object):
         else:
             self.log.info("There are no records to forward")
 
-    def check_and_emit_old_records(self):
-        log.info("Checking if there are more records to be found for %s", self.logname)
-        print("The in pipe contents are %s", self.in_pipe.items())
-        log.debug("My I know of %s resources", len(self.resource_dict))
-        unprocessed, untxed = self.get_unprocessed_resources()
-        if len(unprocessed) > 0:
-            self.log.info("Processing the resources %s", unprocessed)
-            processed = self.process_resources(unprocessed)
-            self.log.info("Persisting the records in JSON %s", len(processed))
-            log.debug("The records are %s", processed)
-            for record_id, record in processed:
-                saved = self.save_json(record_id, record)
-            self.log.info("Pushing the records")
-            for record in saved:
-                frame = self.convert_records(record[2])
-                self.push_frame(record[0][1], record[1], frame)
-        if len(untxed) > 0:
-            self.log.info("Transmitting  untxed data chunks")
-            log.debug("The untxed are %s.", untxed)
-            for untx in untxed:
-                frame_id = untx[0]
-                resource = self.tx_dict[frame_id]
-                self.log.info("The untxed resource is %s", resource)
-                datasource = resource['datasource']
-                frame_path = resource['frame_path']
-                if os.path.exists(frame_path):
-                    log.debug("Loading the frame from %s")
-                    with open(frame_path, 'r') as f:
-                        frame = DataFrame(read_json(f))
-                    self.log.info("Transmitting the frame %s again.")
-                    self.push_frame(datasource, frame_id, frame)
-                else:
-                    self.log.error("The frame doesn't exist to be txed: %s.", frame_id)
-
-    def get_corresponding_chunks(self, resource_id):
-        log.debug("Trying to match the resource %s to its chunks", resource_id)
-        chunks = [(x, self.tx_dict[x]) for x in self.tx_dict if self.tx_dict[x]['resource_id'] == resource_id]
-        log.debug("There are %s chunks.", len(chunks))
-        return chunks
-
     def register_resources(self, resources):
         for resource, obj in resources:
             self.log.info("Registering %s", resource)
             self.resource_dict[resource[0]] = obj.encode("utf-8")
         return resources
-
-    def get_unprocessed_resources(self):
-        unprocessed, untxed = [], []
-        for poll in self.pollingservice_objs:
-            registered = poll.get_registered_resources()
-            for resource_id, resource_enc in registered:
-                if resource_id not in self.resource_dict:
-                    self.log.info("The resource %s is not registered here.", resource_id)
-                    arguments = resource_enc.split(',')
-                    log.debug("The resource arguments are %s", arguments)
-                    resource = poll.return_resource_class()(poll, *arguments)
-                    unprocessed += [(resource_id, resource)]
-                else:
-                    self.log.info("This resource %s has been previously processed and is persisted", resource_id)
-                    corresponding = self.get_corresponding_chunks(resource_id)
-                    untxed = self.filter_corresponding(corresponding)
-                    transform = []
-                    for frame_id, resource in untxed:
-                        self.log.info("Checking the status of %s", frame_id)
-                        if frame_id in self.in_pipe:
-                            self.log.info("Found some transformation on the frame %s", frame_id)
-                        else:
-                            self.log.warn("Found evidence of processing for %s, but no reference in a TX module, reprocessing.", frame_id)
-                            transform += [(frame_id, (resource_id, resource_enc))]
-                    untxed = transform
-        self.log.info("Returning %s resources to be processed from the unprocessed function.", len(unprocessed))
-        log.debug("The unprocessed entries are %s, %s", unprocessed, untxed)
-        return unprocessed, untxed
 
     def cleanup_frame(self, frame_id):
         frame_info = self.tx_dict[frame_id]
@@ -323,38 +241,6 @@ class DataPluginAbstract(object):
         else:
             self.log.error("There doesn't seem to be an indication where this frame is persisted", frame_info)
             return None
-
-    def filter_corresponding(self, pieces):
-        survived = []
-        for piece in pieces:
-            frame_info = piece[1]
-            frame_id = piece[0]
-            self.log.info("Filtering out based on criteria")
-            self.log.info(piece)
-            if 'cleaned' in frame_info:
-                self.log.debug("The piece %s has been scrubbed", frame_id)
-            elif frame_id in self.in_pipe:
-                self.log.info("The piece %s has been recieved from the transform, cleaning now", frame_id)
-                tx_confirm = self.in_pipe[frame_id]
-                if tx_confirm:
-                    self.log.info("Confirmed the transmission of the id %s, cleaning now.", frame_id)
-                    confirm = self.cleanup_frame(frame_id)
-                    if confirm:
-                        self.log.info("Scrubbed the persistence for the frame %s", frame_id)
-                        frame_info['cleaned'] = time.time()
-                        self.tx_dict[frame_id] = frame_info
-                    elif confirm == False:
-                        self.log.warn("This frame seems to have been cleaned already %s", frame_id)
-                    else:
-                        self.log.error("The frame %s wansn't persisted or possibly processed.")
-                    for poll in self.pollingservice_objs:
-                        self.log.info("Found the polling service %s", poll)
-                        poll.remove_resource(frame_id)
-            elif not 'transmission_time' in piece[1] or time.time() - piece[1]['transmission_time'] < 120:
-                self.log.info("This piece has been recently transmitted, and will not be retransmitted now: %s", piece[0])
-            else:
-                survived.append(piece)
-        return survived
 
     def convert_records(self, frame):
         print("Converting the frame %s", frame.keys())
@@ -479,8 +365,6 @@ class DataPluginAbstract(object):
                     self.emit_records(proc)
                 if not found_records:
                     log.info("Found no records to process on this run")
-                self.log.info("%s: Finished emitting records, checking for old", self.host)
-                self.check_and_emit_old_records()
             except Exception as e:
                 self.log.exception('Failed to read data from "%s": %r', self.host, e)
                 self._connected = False
