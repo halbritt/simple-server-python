@@ -121,7 +121,7 @@ class DataPluginAbstract(object):
         log.debug("Trying to save the resource with the right id %s", resource_id)
         return (resource_id, records)
 
-    def save_json(self, record_id, records):
+    def save_json(self, record_ids, records):
         new_records = []
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
@@ -163,9 +163,9 @@ class DataPluginAbstract(object):
             raise
         else:
             self.log.info('Saved data into {}'.format(fname))
-        self.log.info("Registering the data frame %s, %s, %s", record_id, guid, dst_fname)
-        self.register_data_frame(record_id, guid, dst_fname)
-        new_records.append((record_id, guid, records))
+        self.log.info("Registering the data frame %s, %s, %s", record_ids, guid, dst_fname)
+        self.register_data_frame(record_ids, guid, dst_fname)
+        new_records.append((record_ids, guid, records))
         return new_records
 
     @property

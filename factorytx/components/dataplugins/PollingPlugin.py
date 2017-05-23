@@ -41,7 +41,7 @@ class PollingPlugin(DataPlugin):
             self.pollingservice_objs.append(polling_obj)
 
     def read(self):
-        file_entries = []
+        resource_entries = []
         process_cnt = 0
         self.log.info("Looking for files in the FileTransport object.")
         for polling_obj in self.pollingservice_objs:
@@ -58,16 +58,17 @@ class PollingPlugin(DataPlugin):
             #return
             self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
             self.log.info('Found %s registered entries.', found_entries)
-            file_entries.extend(new_entries)
+            resource_entries.extend(new_entries)
 
-        if len(file_entries) == 0:
+        if len(resource_entries) == 0:
             self.log.info("Returning from read with no new entries to read. There are currently %s resources registered", len(self.resource_dict))
             return []
 
-        file_entries = sorted(file_entries, key=lambda e: e[-1])
-        return file_entries
+        resource_entries = sorted(resource_entries)
+        return resource_entries
 
     def process_resource(self, resource, polling_service):
+        log.info("The resource to be processed is %s", resource)
         for parser_obj in self.parser_objs:
             if not polling_service.name in parser_obj.datasources:
                 log.info("The parser %s cant handle %s", parser_obj, polling_service.name)

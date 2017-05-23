@@ -35,13 +35,16 @@ class FileEntry(Resource):
         return os.path.basename(self.path)
 
     def encode(self, encoding):
-        return ','.join([str(x) for x in [self.mtime, self.path, self.size, self.root_path]])
+        return '--'.join([str(x) for x in [self.mtime, self.path, self.size, self.root_path]])
 
     def __eq__(self, other):
         return (self.transport == other.transport and
                 self.path == other.path and
                 self.mtime == other.mtime and
                 self.size == other.size)
+
+    def __lt__(self, other):
+        return self.mtime < other.mtime
 
     def __hash__(self):
         return hash((self.transport, self.path, self.mtime, self.size, self.root_path))
