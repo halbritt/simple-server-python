@@ -180,6 +180,10 @@ class PollingServiceBase(metaclass=ABCMeta):
         last = self.last_registered
         return self.resource_difference(resources, present, last)
 
+    def delete_resource_trace(self, resource_id):
+        if resource_id in self.resources:
+            del self.resources[resource_id]
+
     @abstractmethod
     def remove_resource(self, resource_id):
         """ Remove the persistence of a resource after sucessful transmission. """

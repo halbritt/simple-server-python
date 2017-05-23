@@ -60,6 +60,10 @@ class LocalFileTransport(PollingServiceBase):
         self.log.info("Completed the resource preparation")
         return resource
 
+    def remove_resource(self, resource_id):
+        self.log.info("Removing the file entry %s as a resource from persistence")
+        self.log.info("Do the right thing here")
+
     def return_resource_class(self):
         return FileEntry
 

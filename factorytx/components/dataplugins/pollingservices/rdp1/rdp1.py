@@ -52,7 +52,7 @@ class RDP1(PollingServiceBase):
                     os.remove(remove_path + 'headers')
                 if os.path.exists(remove_path + 'binaryattachment'):
                     os.remove(remove_path + 'binaryattachment')
-                del self.resources[resource_id]
+                self.delete_resource_trace(resource_id)
                 return True
             else:
                 print("Couldn't find the path to remove for resource %s", resource_id)
