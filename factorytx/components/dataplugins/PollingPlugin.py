@@ -18,7 +18,6 @@ log = logging.getLogger("Polling Plugin")
 
 class PollingPlugin(DataPlugin):
     __metaclass__ = abc.ABCMeta
-    remove_remote_completed = True
 
     def __init__(self):
         super(PollingPlugin, self).__init__()
