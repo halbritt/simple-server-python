@@ -2,25 +2,20 @@
     The module is responsible for the primary logic of accounting and transmitting incoming data.
 """
 import multiprocessing
-import time
 import os
 import sys
 import logging
-import shelve
 import pickle
 import threading
-from datetime import timedelta
-from abc import abstractmethod
-from bson import ObjectId
+from abc import abstractmethod, ABCMeta
 from time import sleep
+from time import time as tme
 from factorytx.DataService import DataService
 from factorytx.managers.GlobalManager import global_manager
 from factorytx.Global import setup_log
 from factorytx import utils
-from pandas import DataFrame, read_json
-import base64
-from itertools import islice, chain
-from simpleeval import simple_eval
+from pandas import DataFrame
+from itertools import chain
 GLOBAL_MANAGER = global_manager()
 
 
@@ -40,6 +35,7 @@ class DataPluginAbstract(object):
     or as a post-processing service
     """
     __version__ = "0.1"
+    __metaclass__ = ABCMeta
 
     reconnect_timeout = 5  # seconds
     reconnect_attempts = float('inf')  # Keep retrying until connected
@@ -51,79 +47,88 @@ class DataPluginAbstract(object):
     counter = 1
 
     def __init__(self):
+        """ A DataPlugin is a microservice that runs by injesting data, this initializes the status
+            of a particular plugin.
+        """
         super(DataPluginAbstract, self).__init__()
         self._connected = False
         self._running = True
         self.client = None
-
-    def __del__(self):
-        try:
-            self.disconnect()
-        except Exception as disconnect_problem:
-            self.log.warn("There was a problem disconnecting this plugin: %s", disconnect_problem)
-            pass
-
-    def __repr__(self):
-        return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
-
-    def load_parameters(self, sdconfig, schema, conf):
-        super(DataPluginAbstract, self).load_parameters(sdconfig, schema, conf)
         self.resource_dict = {}
         self.tx_dict = {}
 
+    def __del__(self):
+        """ Disconnects this plugin from the FTX instance. """
+        try:
+            self.disconnect()
+        except Exception as disconnect_problem:
+            self.log.warning("There was a problem disconnecting this plugin: %s", disconnect_problem)
+
+    def __repr__(self):
+        """ Prints the plugin class as well as the individual plugin name of this plugin. """
+        return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
+
+    def load_parameters(self, sdconfig, schema, conf):
+        """ Given a SDCONFIG, SCHEMA, and CONF files, goes ahead and loads the configuration and
+            parameters needed to start this dataplugin.
+        """
+        super(DataPluginAbstract, self).load_parameters(sdconfig, schema, conf)
+
+    @abstractmethod
     def read(self):
-        return
+        """ This method must be defined in every plugin that subclasses the DataPlugin Class """
+        pass
 
+    @abstractmethod
     def remove_resource(self, resource_id):
-        return
+        """ Given a RESOURCE_ID, adequately removes a resource from persistence.
 
+        :param resource_id: An id that is returned by a subclass a resource.
+        """
+        pass
+
+    @abstractmethod
     def process_resource(self, resource, resource_service):
-        return
+        """ Given a RESOURCE object as well as a RESOURCE_SERVICE that is responsible for organizing
+            and knowing about a given resource, processed the resource and returns the data ready
+            to be forwarded to the transform/TX modules.
 
-    def save_raw(self, records):
-        return
-
-    def load_raw(self, source):
-        return
-
-    def makeDictTree(self, inDict):
-        tree = {}
-
-        for key, finalvalue in inDict.iteritems():
-            t = tree
-
-            parts = key.split('.')
-            for idx, part in enumerate(parts):
-                val = finalvalue if idx == len(parts)-1 else {}
-                t = t.setdefault(part, val)
-        return tree
+        :param resource: This is the resource object
+        :param resource_service: This may be a polling service or a server service.
+        """
+        pass
 
     def _getSource(self):
+        """ Goes and gets the source for this particular microservice. """
         return self.source if hasattr(self, 'source') else "Unknown"
 
     def encrypt(self, records):
+        """ Given a set of RECORDS, completes at rest encryption and returns the records.
+
+        :param records: these records are the result of parsing data that is obtained.
+        """
         # TODO: Complete for at rest encryption
         return records
 
     def _load_plugin(self, manager, cfg):
+        """ Given a MANAGER and a CFG, loads the desired plugin and returns the object.
+
+        :param manager: The manager for the type that we are trying to load.
+        :param cfg: The configuration block needed to load a plugin.
+        """
         if 'config' in cfg:
             cfg['config'].update({'source': self.source,
                                   'resource_dict_location': self.resource_dict_location})
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
-    def process(self, resource_id, resource):
-        self.log.debug("Processing the resource %s", resource)
-        time = resource.mtime
-        polling_service = resource.transport
-        parsed = False
-        self.log.debug("Trying to process the entry %s", resource)
-        records = self.process_resource(resource, polling_service)
-        self.log.debug("Found some records with %s columns", len(records))
-        self.log.debug("Trying to save the resource with the right id %s", resource_id)
-        return (resource_id, records)
-
     def save_json(self, record_ids, records):
+        """ Given some RECORD_IDS and a set of RECORDS, proceeds to save the records in order to
+            maintain not losing any data.
+
+        :param record_ids: One or more records that we used to compile the records.
+        :param records: The result of parsing or loading uploaded data and formatting it correctly
+        """
         new_records = []
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
@@ -253,7 +258,7 @@ class DataPluginAbstract(object):
         if self.validate_frame(frame):
             frame_data = self.tx_dict[frame_id]
             self.log.info("Transmitting the dataframe %s", frame_data)
-            frame_data['transmission_time'] = time.time()
+            frame_data['transmission_time'] = tme()
             self.tx_dict[frame_id] = frame_data
             self.log.info("Marked the time for %s", frame_id)
             self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame})
@@ -263,10 +268,10 @@ class DataPluginAbstract(object):
 
     def validate_frame(self, frame):
         # TODO: SOME ADEQUATE VALIDATION HERE
-        if type(frame) == DataFrame:
+        if isinstance(frame) == DataFrame:
             self.log.info("its a frame!")
             return True
-        elif type(frame) == dict:
+        elif isinstance(frame) == dict:
             self.log.info("its a dictionary representing an sslog!")
             return True
         else:
@@ -279,14 +284,14 @@ class DataPluginAbstract(object):
 
     def register_data_frame(self, resource_id, data_frame_id, fname):
         self.log.info("Registering the dataframe with resource id %s", resource_id)
-        self.tx_dict[data_frame_id] = {'registration_time':time.time(),
+        self.tx_dict[data_frame_id] = {'registration_time':tme(),
                                        'resource_id': [x[0] for x in resource_id],
                                        'datasource':resource_id[0][1], 'frame_path': fname}
         self.log.info("Sucessfuly registered the resources %s to chunk %s", resource_id, data_frame_id)
 
     def over_time(self, name):
         if name in self.resource_dict:
-            if not self.resource_dict[name][0] - time.time() > self.retransmission_time:
+            if not self.resource_dict[name][0] - tme() > self.retransmission_time:
                 return False
         return True
 
@@ -378,10 +383,15 @@ class DataPluginAbstract(object):
 
 
 class DataPlugin(DataPluginAbstract, multiprocessing.Process, DataService):
+
+    __metaclass__ = ABCMeta
+
     pass
 
 
 class DataPluginThread(DataPluginAbstract, threading.Thread, DataService):
+
+    __metaclass__ = ABCMeta
 
     def __init__(self):
         super(DataPluginThread, self).__init__()
