@@ -64,8 +64,8 @@ class TransformAbstract(object):
     def __repr__(self):
         return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(TransformAbstract, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(TransformAbstract, self).load_parameters(sdconfig, schema, conf)
         self.transform_objs = []
         self.transform_ref = {}
         for transform_cfg in self.transforms:

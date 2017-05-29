@@ -25,8 +25,8 @@ class PollingPlugin(DataPlugin):
         self.parser_objs = []
         self.pollingservice_objs = []
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(PollingPlugin, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(PollingPlugin, self).load_parameters(sdconfig, schema, conf)
         self.parser_objs = []
         self.pollingservice_objs = []
         self.log.debug("My polling config is %s", conf)
@@ -66,6 +66,29 @@ class PollingPlugin(DataPlugin):
 
         resource_entries = sorted(resource_entries)
         return resource_entries
+
+    def process_resources(self, resources):
+        processed, cnt, errors = [], 0, 0
+        for resource in resources:
+            print("Processing %s", resource)
+            processed += [self.process(resource[0], resource[1])]
+            cnt += 1
+            #except:
+            #    log.warn("Not able to process the resource %s, skipping", resource)
+            #    errors += 1
+        log.info("Processed %s resources while encountering %s errors.", cnt, errors)
+        return processed
+
+    def process(self, resource_id, resource):
+        log.debug("Processing the resource %s", resource)
+        time = resource.mtime
+        polling_service = resource.transport
+        parsed = False
+        log.debug("Trying to process the entry %s", resource)
+        records = self.process_resource(resource, polling_service)
+        log.debug("Found some records with %s columns", len(records))
+        log.debug("Trying to save the resource with the right id %s", resource_id)
+        return ([resource_id], records)
 
     def process_resource(self, resource, polling_service):
         log.info("The resource to be processed is %s", resource)

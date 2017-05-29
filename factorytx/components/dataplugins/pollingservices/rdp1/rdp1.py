@@ -13,8 +13,8 @@ class RDP1(PollingServiceBase):
 
     logname = 'RDP1 Stream'
 
-    def loadParameters(self, schema, conf):
-        super(RDP1, self).loadParameters(schema, conf)
+    def load_parameters(self, schema, conf):
+        super(RDP1, self).load_parameters(schema, conf)
         print("The configuration for this Localfile transport is %s", conf)
         logname = ': '.join([self.logname, conf['name']])
         super(RDP1, self).setup_log(logname)

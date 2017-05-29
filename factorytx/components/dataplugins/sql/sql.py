@@ -84,8 +84,8 @@ class SQL(DataPlugin):
         self.log.warn('failed to find table name in query')
         return ''
 
-    def loadParameters(self, sdconfig, schema, config):
-        super(SQL, self).loadParameters(sdconfig, schema, config)
+    def load_parameters(self, sdconfig, schema, config):
+        super(SQL, self).load_parameters(sdconfig, schema, config)
         if self.db_url:
            db_url = r'{}'.format(self.db_url)
         else:

@@ -16,7 +16,7 @@ from datetime import datetime
 
 class TransformBase(object):
 
-    def loadParameters(self, schema, plgn_cfg):
+    def load_parameters(self, schema, plgn_cfg):
         self.actions = []
         self.stractions = []
         self.regex = []
@@ -42,7 +42,7 @@ class TransformBase(object):
 
     def apply_config_actions(self, frame: pd.DataFrame) -> pd.DataFrame:
         """ This function applies the general dataframe manipulation that is a part of the core
-            pandas functionality to a FRAME and is written in the config for my transform. 
+            pandas functionality to a FRAME and is written in the config for my transform.
 
         """
         self.log.info("Applying preprocessing")

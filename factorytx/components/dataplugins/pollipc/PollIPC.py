@@ -41,7 +41,7 @@ def setupOutputDirectory(outputdirectory):
 # ****************************************
 class PollIPC():
 
-    def loadParameters(self, sdconfig, schema, config):
+    def load_parameters(self, sdconfig, schema, config):
         self.__dict__.update(config)
         logname = 'PollIPC'
         if hasattr(self, 'source'):

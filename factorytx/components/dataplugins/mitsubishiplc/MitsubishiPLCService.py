@@ -44,7 +44,7 @@ class MitsubishiPLCService(threading.Thread, DataService):
     #     pass
     #END FIX ME
 
-    def loadParameters(self, sdconfig, schema, config):
+    def load_parameters(self, sdconfig, schema, config):
         self.plcpoller.loadPLCParameters(sdconfig, schema, config)
     
     def run(self):

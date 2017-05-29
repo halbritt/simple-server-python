@@ -9,18 +9,23 @@ class RDP1Server:
 
     logname = "RDP1"
 
-    def __init__(self, data_store):
+    def __init__(self, data_store: str) -> ():
         if not os.path.exists(data_store):
             print("The datastore is", data_store)
             os.makedirs(data_store)
         self.data_store = data_store
 
     @cherrypy.expose
-    def index():
+    def index() -> str:
         return "RDP1Server"
 
     @cherrypy.expose
     def upload(self, metadata=None, ipcfile=None):
+        """ This method uploads an RDP1 packet of sslogs possibly including an attachment,
+            persists the data on the filesystem, and then returns a response dictionary with
+            metadata regarding the upload process
+
+        """
         print("Uploading an RDP1 payload.")
         key_name = cherrypy.request.headers["X-Sm-Api-Key"]
         if key_name not in self.apikeys:

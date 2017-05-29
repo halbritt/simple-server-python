@@ -17,7 +17,7 @@ class BaseTX(object):
 
     logname = "BaseTX"
 
-    def loadParameters(self, schema, plgn_cfg):
+    def load_parameters(self, schema, plgn_cfg):
         print("The configuration for this tx is %s", plgn_cfg)
         print("The schema is %s", schema)
         self.datasources = plgn_cfg['datasources']

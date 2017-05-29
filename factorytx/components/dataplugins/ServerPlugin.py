@@ -20,8 +20,8 @@ class ServerPlugin(DataPlugin):
     def __init__(self):
         super(ServerPlugin, self).__init__()
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(ServerPlugin, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(ServerPlugin, self).load_parameters(sdconfig, schema, conf)
         print(conf)
         server_conf = {'type':conf['protocol'], 'config':conf}
         self.server = super(ServerPlugin, self)._load_plugin(poll_manager, server_conf)

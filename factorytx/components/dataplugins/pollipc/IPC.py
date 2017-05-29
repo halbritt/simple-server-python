@@ -42,8 +42,8 @@ class IPC(threading.Thread, DataService):
         # Here is where you would handle reconnection
         pass
 
-    def loadParameters(self, sdconfig, schema, config):
-        self.ipcpoller.loadParameters(sdconfig, schema, config)
+    def load_parameters(self, sdconfig, schema, config):
+        self.ipcpoller.load_parameters(sdconfig, schema, config)
 
     def run(self):
         run = True

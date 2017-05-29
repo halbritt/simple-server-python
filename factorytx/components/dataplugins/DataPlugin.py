@@ -1,3 +1,6 @@
+""" The dataplugin code is responsible for managing the suite of data acquisition microservices.
+    The module is responsible for the primary logic of accounting and transmitting incoming data.
+"""
 import multiprocessing
 import time
 import os
@@ -5,10 +8,10 @@ import sys
 import logging
 import shelve
 import pickle
+import threading
 from datetime import timedelta
-
+from abc import abstractmethod
 from bson import ObjectId
-
 from time import sleep
 from factorytx.DataService import DataService
 from factorytx.managers.GlobalManager import global_manager
@@ -17,17 +20,16 @@ from factorytx import utils
 from pandas import DataFrame, read_json
 import base64
 from itertools import islice, chain
-import threading
-
-global_manager = global_manager()
 from simpleeval import simple_eval
+GLOBAL_MANAGER = global_manager()
 
 
+LOG = logging.getLogger("Data Plugin")
 try:
     import ujson as json
-except:
+except Exception as import_error:
+    LOG.warning("There was an error importing the ujson module: %s", import_error)
     import json
-log = logging.getLogger("Data Plugin")
 
 class DataPluginAbstract(object):
     """
@@ -57,18 +59,17 @@ class DataPluginAbstract(object):
     def __del__(self):
         try:
             self.disconnect()
-        except:
+        except Exception as disconnect_problem:
+            self.log.warn("There was a problem disconnecting this plugin: %s", disconnect_problem)
             pass
 
     def __repr__(self):
         return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(DataPluginAbstract, self).loadParameters(sdconfig, schema, conf)
-        self.resource_dict = shelve.open(os.path.join(self.resource_dict_location,
-                                                      self.resource_dict_name + 'plugin_resources'))
-        self.tx_dict = shelve.open(os.path.join(self.resource_dict_location, self.resource_dict_name + 'tx-chunks'))
-        self.last_frame_keys = set()
+    def load_parameters(self, sdconfig, schema, conf):
+        super(DataPluginAbstract, self).load_parameters(sdconfig, schema, conf)
+        self.resource_dict = {}
+        self.tx_dict = {}
 
     def read(self):
         return
@@ -106,19 +107,20 @@ class DataPluginAbstract(object):
 
     def _load_plugin(self, manager, cfg):
         if 'config' in cfg:
-            cfg['config'].update({'source': self.source, 'resource_dict_location':self.resource_dict_location})
+            cfg['config'].update({'source': self.source,
+                                  'resource_dict_location': self.resource_dict_location})
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
     def process(self, resource_id, resource):
-        log.debug("Processing the resource %s", resource)
+        self.log.debug("Processing the resource %s", resource)
         time = resource.mtime
         polling_service = resource.transport
         parsed = False
-        log.debug("Trying to process the entry %s", resource)
+        self.log.debug("Trying to process the entry %s", resource)
         records = self.process_resource(resource, polling_service)
-        log.debug("Found some records with %s columns", len(records))
-        log.debug("Trying to save the resource with the right id %s", resource_id)
+        self.log.debug("Found some records with %s columns", len(records))
+        self.log.debug("Trying to save the resource with the right id %s", resource_id)
         return (resource_id, records)
 
     def save_json(self, record_ids, records):
@@ -186,16 +188,16 @@ class DataPluginAbstract(object):
     def reconnect(self):
         self._connected = False
         self.perform_teardown()
-        log.warning('Connection lost to %s. Trying to reconnect to %s', self.host, self.logname)
+        self.log.warning('Connection lost to %s. Trying to reconnect to %s', self.host, self.logname)
         count = 0
         keep_trying = True
         while keep_trying:
             sleep(self.reconnect_timeout)
-            log.warning('Reconnection Attempt: %s for %s', count, self.logname)
+            self.log.warning('Reconnection Attempt: %s for %s', count, self.logname)
             try:
                 self.connect()
             except Exception as e:
-                log.warning("Connection Error: %s for %s", e, self.logname)
+                self.log.warning("Connection Error: %s for %s", e, self.logname)
             if self.connected:
                 return
             count += 1
@@ -208,9 +210,9 @@ class DataPluginAbstract(object):
                         ''.format(self.reconnect_attempts))
 
     def emit_records(self, records):
-        log.info("Emitting %s records for the plugin %s", len(records[1]), self.logname)
-        log.debug("The record info is %s", records[0])
         records_id, records = records
+        self.log.debug("The record info is %s", records_id)
+        self.log.info("Emitting %s records for the plugin %s", len(records), self.logname)
         self.log.info("Persisting %s records in JSON", len(records))
         records = self.save_json(records_id, records)
         self.log.info("Saved the JSON")
@@ -239,7 +241,8 @@ class DataPluginAbstract(object):
                 self.log.warn("The path %s doesn't seem to exist to be removed", frame_path)
                 return False
         else:
-            self.log.error("There doesn't seem to be an indication where this frame is persisted", frame_info)
+            self.log.error("There doesn't seem to be an indication where this frame is persisted",
+                           frame_info)
             return None
 
     def convert_records(self, frame):
@@ -249,42 +252,35 @@ class DataPluginAbstract(object):
     def push_frame(self, datasource, frame_id, frame):
         if self.validate_frame(frame):
             frame_data = self.tx_dict[frame_id]
-            log.info("Transmitting the dataframe %s", frame_data)
+            self.log.info("Transmitting the dataframe %s", frame_data)
             frame_data['transmission_time'] = time.time()
             self.tx_dict[frame_id] = frame_data
-            log.info("Marked the time for %s", frame_id)
+            self.log.info("Marked the time for %s", frame_id)
             self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame})
-            log.info("Pushed out a new dataframe with %s indexes.", len(frame))
+            self.log.info("Pushed out a new dataframe with %s indexes.", len(frame))
         else:
-            log.info("Failed to validate frame")
+            self.log.info("Failed to validate frame")
 
     def validate_frame(self, frame):
         # TODO: SOME ADEQUATE VALIDATION HERE
         if type(frame) == DataFrame:
-            log.info("its a frame!")
+            self.log.info("its a frame!")
             return True
         elif type(frame) == dict:
-            log.info("its a dictionary representing an sslog!")
+            self.log.info("its a dictionary representing an sslog!")
             return True
         else:
-            log.info("Its not a frame.")
+            self.log.info("Its not a frame.")
             return False
 
+    @abstractmethod
     def process_resources(self, resources):
-        processed, cnt, errors = [], 0, 0
-        for resource in resources:
-            print("Processing %s", resource)
-            processed += [self.process(resource[0], resource[1])]
-            cnt += 1
-            #except:
-            #    log.warn("Not able to process the resource %s, skipping", resource)
-            #    errors += 1
-        log.info("Processed %s resources while encountering %s errors.", cnt, errors)
-        return processed
+        pass
 
     def register_data_frame(self, resource_id, data_frame_id, fname):
-        log.info("Registering the dataframe with resource id %s", resource_id)
-        self.tx_dict[data_frame_id] = {'registration_time':time.time(), 'resource_id':[x[0] for x in resource_id],
+        self.log.info("Registering the dataframe with resource id %s", resource_id)
+        self.tx_dict[data_frame_id] = {'registration_time':time.time(),
+                                       'resource_id': [x[0] for x in resource_id],
                                        'datasource':resource_id[0][1], 'frame_path': fname}
         self.log.info("Sucessfuly registered the resources %s to chunk %s", resource_id, data_frame_id)
 
@@ -309,7 +305,8 @@ class DataPluginAbstract(object):
                     if trans:
                         completed += [resource_id]
                     else:
-                        self.log.warn("The resource %s doesn't seem to exist along its path. ID: %s", self.tx_dict[key], resource_id)
+                        self.log.warn("The resource %s doesn't seem to exist along its path. ID: %s",
+                                      self.tx_dict[key], resource_id)
                         del self.in_pipe[key]
                         del self.tx_dict[key]
                 if completed == todo:
@@ -332,10 +329,10 @@ class DataPluginAbstract(object):
         self.log = log
 
         if os.name == 'nt':
-            global_manager.dict = self.__dict__[
+            GLOBAL_MANAGER.dict = self.__dict__[
                 '_Win32ServiceManager__global_dict']
 
-        log.info("Running {} plugin...".format(self.name))
+        self.log.info("Running {} plugin...".format(self.name))
         # Create output directory if it is not created
         # todo, should have some (signal based?) way
         # to exit the service so we can join()
@@ -345,12 +342,12 @@ class DataPluginAbstract(object):
         try:
             self.connect()
         except Exception as e:
-            log.error('Failed to connect to {}'.format(self.host))
-            log.exception(e)
+            self.log.error('Failed to connect to {}'.format(self.host))
+            self.log.exception(e)
             self.reconnect()
 
         while self._running:
-            log.info("%s: Looking for my data", self.logname)
+            self.log.info("%s: Looking for my data", self.logname)
             try:
                 self.log.info("%s: Detecting New Records", self.host)
                 resources = self.read()
@@ -364,13 +361,13 @@ class DataPluginAbstract(object):
                     found_records = True
                     self.emit_records(proc)
                 if not found_records:
-                    log.info("Found no records to process on this run")
+                    self.log.info("Found no records to process on this run")
             except Exception as e:
                 self.log.exception('Failed to read data from "%s": %r', self.host, e)
                 self._connected = False
                 self.reconnect()
                 continue
-            log.info("Completed search for the data for the dataplugin %s", self.logname)
+            self.log.info("Completed search for the data for the dataplugin %s", self.logname)
 
             # sleep by 0.1
             for _ in range(int(self.poll_rate / 0.1)):

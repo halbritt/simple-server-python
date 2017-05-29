@@ -67,8 +67,8 @@ class SpreadSheetParser(BaseParser):
     def __init__(self):
         super(SpreadSheetParser, self).__init__()
 
-    def loadParameters(self, schema, conf):
-        super(SpreadSheetParser, self).loadParameters(schema, conf)
+    def load_parameters(self, schema, conf):
+        super(SpreadSheetParser, self).load_parameters(schema, conf)
         log.debug("Found the configuration %s for parser", conf)
         super(SpreadSheetParser, self).setup_log(self.logname + ': ' + conf['name'])
         # check required fields

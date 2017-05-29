@@ -61,8 +61,8 @@ class TXAbstract(object):
     def __repr__(self):
         return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(TXAbstract, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(TXAbstract, self).load_parameters(sdconfig, schema, conf)
         self.tx_objs = []
         if not os.path.exists(self.tx_persistence_location):
             os.mkdir(self.tx_persistence_location)

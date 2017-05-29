@@ -54,7 +54,7 @@ class PollingServiceBase(metaclass=ABCMeta):
             self.plugin_type = self.protocol
         self.log = logging.getLogger(self.plugin_type + ': ' + logname)
 
-    def loadParameters(self, schema, conf):
+    def load_parameters(self, schema, conf):
         if conf is None:
             conf = {}
         self.__dict__.update(conf)
@@ -167,11 +167,13 @@ class PollingServiceBase(metaclass=ABCMeta):
         unregistered = []
         all_resources = [x for x in self.get_all_resources()]
         self.log.info("The resources that are available number %s.", len(all_resources))
+        self.log.info("The resource registrations are %s", self.resources)
         for resource in self.get_all_resources():
-            if not resource in self.resources:
+            resource_name = resource.encode('utf-8')
+            if not resource_name in self.resources:
                 unregistered.append(resource)
             else:
-                log.debug("The resource %s is registered with key %s and item %s", resource, self.resources[resource])
+                log.debug("The resource %s is registered with key %s", resource, self.resources[resource_name])
         self.log.info("The resources that are available and unregistered are %s", unregistered)
         return unregistered
 

@@ -100,10 +100,10 @@ class DataService(object):
             cfg['config'].update({'source': self.name})
             obj = manager.get_plugin(cfg['type'])()
             schema = manager.get_plugin_schema(cfg['type'], cfg['config']['version'])
-            obj.loadParameters(schema, cfg['config'])
+            obj.load_parameters(schema, cfg['config'])
         return obj
 
-    def loadParameters(self, sdconfig, schema, conf):
+    def load_parameters(self, sdconfig, schema, conf):
         '''
         This function will load up parameters and append that particular config
         to the object as variables

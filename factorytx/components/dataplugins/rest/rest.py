@@ -46,8 +46,8 @@ class RESTService(DataPlugin):
         # cachedirectory + cachefilename from config file
         self.cache_file = os.path.join(self.cachedirectory, self.cachefilename)
 
-    def loadParameters(self, sdconfig, schema, config):
-        super(RESTService, self).loadParameters(sdconfig, schema, config)
+    def load_parameters(self, sdconfig, schema, config):
+        super(RESTService, self).load_parameters(sdconfig, schema, config)
         self._init_cache_filename()
         self.load_cache()
 

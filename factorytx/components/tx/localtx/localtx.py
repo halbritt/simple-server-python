@@ -14,8 +14,8 @@ class LocalTX(BaseTX):
 
     logname = 'LocalTX'
 
-    def loadParameters(self, schema, conf):
-        super(LocalTX, self).loadParameters(schema, conf)
+    def load_parameters(self, schema, conf):
+        super(LocalTX, self).load_parameters(schema, conf)
         self.logname = ': '.join([self.logname, conf['source']])
 
     def TX(self, data):

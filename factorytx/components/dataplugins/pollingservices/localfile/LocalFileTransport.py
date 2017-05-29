@@ -12,8 +12,8 @@ class LocalFileTransport(PollingServiceBase):
 
     logname = 'LocalFileTransport'
 
-    def loadParameters(self, schema, conf):
-        super(LocalFileTransport, self).loadParameters(schema, conf)
+    def load_parameters(self, schema, conf):
+        super(LocalFileTransport, self).load_parameters(schema, conf)
         print("The configuration for this Localfile transport is %s", conf)
         logname = ': '.join([self.logname, conf['name']])
         super(LocalFileTransport, self).setup_log(logname)

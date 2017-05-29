@@ -25,11 +25,11 @@ class RemoteDataPost(BaseTX):
     gzip_level = -1
     gzip_wbits = 31
 
-    def loadParameters(self, schema, conf):
+    def load_parameters(self, schema, conf):
         self.logname = ': '.join([self.logname, conf['source']])
         self.log = getLogger(self.logname)
         conf['logname'] = self.logname
-        super(RemoteDataPost, self).loadParameters(schema, conf)
+        super(RemoteDataPost, self).load_parameters(schema, conf)
         self.request_setup = self.setup_request()
 
     def TX(self, data, size):

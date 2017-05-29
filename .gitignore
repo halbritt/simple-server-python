@@ -67,3 +67,6 @@ conf.d/*
 
 #macos files
 ._*
+
+# Config Files
+factorytx/pipelines/conf.d
