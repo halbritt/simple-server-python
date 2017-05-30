@@ -143,7 +143,6 @@ class DataPluginAbstract(object):
                 json_data = json.dumps(records)
             except Exception as e:
                 self.log.info("The exception is %s, trying to pickle sslogs", e)
-        log.info("The json data has been dumped")
         if not os.path.exists(self.outputdirectory):
             os.makedirs(self.outputdirectory)
         # TODO: NEED TO GET THE TIMESTAMP OUT OF DATA BEFOREHAND
@@ -268,10 +267,10 @@ class DataPluginAbstract(object):
 
     def validate_frame(self, frame):
         # TODO: SOME ADEQUATE VALIDATION HERE
-        if isinstance(frame) == DataFrame:
+        if isinstance(frame, DataFrame):
             self.log.info("its a frame!")
             return True
-        elif isinstance(frame) == dict:
+        elif isinstance(frame, dict):
             self.log.info("its a dictionary representing an sslog!")
             return True
         else:
