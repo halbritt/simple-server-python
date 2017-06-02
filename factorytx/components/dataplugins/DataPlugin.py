@@ -270,8 +270,8 @@ class DataPluginAbstract(object):
         if isinstance(frame, DataFrame):
             self.log.info("its a frame!")
             return True
-        elif isinstance(frame, dict):
-            self.log.info("its a dictionary representing an sslog!")
+        elif isinstance(frame, list):  # HACK
+            self.log.info("its a list of sslog dictionaries!")
             return True
         else:
             self.log.info("Its not a frame.")

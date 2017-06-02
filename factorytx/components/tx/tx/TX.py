@@ -224,8 +224,7 @@ class TXAbstract(object):
                     logs = res['frame']
                     log.info("The sslogs are of length %s", len(logs))
                     running_size = 0
-                    for sslog in logs:
-                        sslog_data = logs[sslog]
+                    for sslog_data in logs:
                         if 'attachment_info' in sslog_data:
                             log.info("Loading and attching a binary attachment for %s", sslog_data['attachment_info'])
                             sslog_data['attachment'] = self.load_binary(sslog_data['attachment_info'])

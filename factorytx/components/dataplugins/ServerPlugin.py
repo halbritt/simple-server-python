@@ -93,62 +93,59 @@ class ServerPlugin(DataPlugin):
 
     def aggregate_logs(self, resources):
         log_ids = []
-        agg_logs = []
         running_size = 0
         running_logs = 0
         max_size = int(self.max_size)
         max_logs = int(self.max_logs)
         log_ids = []
-        log_data = {}
+        log_data = []
         for resource in resources:
             rec_id, rec_data = resource[0], resource[1].load_resource()
             self.log.info("Aggregating the logs corresponding to id %s", rec_id)
-            num_logs = len(rec_data)
-            self.log.info("The number of logs that we will process is %s", num_logs)
             sslogs = rec_data[0]
             attachment_info = rec_data[1]
+            num_logs = len(sslogs)
+            self.log.info("The number of logs that we will process is %s", num_logs)
             if attachment_info['binary']:
                 if attachment_info['original_size'] > max_size or attachment_info['original_size'] > max_size - running_size:
                     self.log.info("The resource %s goes over the running max or is itself bigger than the max size.", rec_id)
                     if log_ids:
                         yield (log_ids, log_data)
                         log_ids = []
-                        log_data = {}
+                        log_data = []
                         running_size = 0
                         running_logs = 0
-                    for time in sslogs:
-                        log_dic = sslogs[time]
-                        log_dic['attachment_info'] = attachment_info
+                    for log_dict in sslogs.values():
+                        log_dict['attachment_info'] = attachment_info
                         if attachment_info['original_size'] > max_size:
                             self.log.error("The attachment size %s is bigger than the max aggregate size %s, appending singleton!",
                                            attachment_info['original_size'], max_size)
-                            yield ([rec_id], log_dic)
+                            yield ([rec_id], log_dict)
                         else:
                             self.log.info("The attachment size %s is bigger than the running size of %s", attachment_info['original_size'], running_size)
                             log_ids.append(rec_id)
-                            log_data.update({time: log_dic})
+                            log_data.append(log_dict)
                             running_size += attachment_info['original_size']
                             running_logs += 1
                 else:
                     self.log.info("Appending the info in %s to the running totals", rec_id)
                     running_size += attachment_info['original_size']
-                    for time in sslogs:
-                        log_dic = sslogs[time]
-                        log_dic['attachment_info'] = attachment_info
+                    for log_dict in sslogs.values():
+                        log_dict['attachment_info'] = attachment_info
                         log_ids.append(rec_id)
-                        log_data.update({time: log_dic})
+                        log_data.append(log_dict)
                         running_logs += 1
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
                 yield (log_ids, log_data)
                 log_ids = [rec_id]
-                log_data = {}
-                log_data.update(sslogs)
+                log_data = []
+                log_data.extend(sslogs.values())
                 running_logs = 0
                 running_size = 0
             else:
                 self.log.info("The number of sslogs will be appended to the growing data")
-                log_data.update(sslogs)
+                log_data.extend(sslogs.values())
                 running_logs += num_logs
                 log_ids.append(rec_id)
         if log_ids:
