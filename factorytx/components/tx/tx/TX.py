@@ -64,13 +64,12 @@ class TXAbstract(object):
     def load_parameters(self, sdconfig, schema, conf):
         super(TXAbstract, self).load_parameters(sdconfig, schema, conf)
         self.tx_objs = []
-        if not os.path.exists(self.tx_persistence_location):
-            os.mkdir(self.tx_persistence_location)
-        self.tx_ref = shelve.open(os.path.join(self.tx_dict_location, self.tx_dict_name))
-        for tx_cfg in self.tx:
+        print(self.options)
+        self.tx_ref = {}
+        for tx_cfg in self.options['tx']:
             self.log.info("Loading the TX configuration %s", tx_cfg)
             if not 'log_level' in tx_cfg['config']:
-                tx_cfg['config']['log_level'] = self.log_level
+                tx_cfg['config']['log_level'] = self.options['log_level']
             tx_obj = self._load_plugin(tx_manager, tx_cfg)
             self.log.debug("The tx options are", tx_obj.options)
             self.tx_objs.append(tx_obj)
@@ -196,7 +195,7 @@ class TXAbstract(object):
         """
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
-        log = setup_log(self.logname, self.log_level)
+        log = setup_log(self.logname, self.options['log_level'])
         sys.modules[self.__class__.__module__].log = log
         self.log = log
 
@@ -210,7 +209,7 @@ class TXAbstract(object):
         try:
             self.connect()
         except Exception as e:
-            log.error('Failed to connect to %s', self.host)
+            log.error('Failed to connect to %s', self.options['host'])
             log.exception(e)
             self.reconnect()
 
@@ -248,7 +247,7 @@ class TXAbstract(object):
 
             # sleep by 0.1
             if self.is_empty():
-                for _ in range(int(float(self.polltime) / 0.1)):
+                for _ in range(int(float(self.options['poll_rate']) / 0.1)):
                     time.sleep(0.1)
                     if not self._running:
                         break

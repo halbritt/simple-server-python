@@ -8,6 +8,7 @@ import logging
 
 from factorytx.components.dataplugins.DataPlugin import DataPlugin
 from factorytx.managers.PluginManager import component_manager
+from factorytx.components.dataplugins.resources.rawsslogs import RawSSLogs
 from factorytx import utils
 
 component_manger = component_manager()
@@ -25,7 +26,6 @@ class ServerPlugin(DataPlugin):
         print(conf)
         server_conf = {'type':conf['protocol'], 'config':conf}
         self.server = super(ServerPlugin, self)._load_plugin(poll_manager, server_conf)
-        self.poll_rate = int(self.poll_rate)
 
     def remove_resource(self, resource_id):
         self.log.info("Removing the resource %s from my server", resource_id)
@@ -95,8 +95,8 @@ class ServerPlugin(DataPlugin):
         log_ids = []
         running_size = 0
         running_logs = 0
-        max_size = int(self.max_size)
-        max_logs = int(self.max_logs)
+        max_size = int(self.options['max_size'])
+        max_logs = int(self.options['max_logs'])
         log_ids = []
         log_data = []
         for resource in resources:
@@ -110,7 +110,7 @@ class ServerPlugin(DataPlugin):
                 if attachment_info['original_size'] > max_size or attachment_info['original_size'] > max_size - running_size:
                     self.log.info("The resource %s goes over the running max or is itself bigger than the max size.", rec_id)
                     if log_ids:
-                        yield (log_ids, log_data)
+                        yield RawSSLogs.create_raw_sslogs(log_ids, log_data)
                         log_ids = []
                         log_data = []
                         running_size = 0
@@ -120,7 +120,7 @@ class ServerPlugin(DataPlugin):
                         if attachment_info['original_size'] > max_size:
                             self.log.error("The attachment size %s is bigger than the max aggregate size %s, appending singleton!",
                                            attachment_info['original_size'], max_size)
-                            yield ([rec_id], log_dict)
+                            yield RawSSLogs.create_raw_sslogs([rec_id], log_dict)
                         else:
                             self.log.info("The attachment size %s is bigger than the running size of %s", attachment_info['original_size'], running_size)
                             log_ids.append(rec_id)
@@ -137,7 +137,7 @@ class ServerPlugin(DataPlugin):
                         running_logs += 1
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
-                yield (log_ids, log_data)
+                yield RawSSLogs.create_raw_sslogs(log_ids, log_data)
                 log_ids = [rec_id]
                 log_data = []
                 log_data.extend(sslogs.values())
@@ -150,7 +150,7 @@ class ServerPlugin(DataPlugin):
                 log_ids.append(rec_id)
         if log_ids:
             self.log.info("Appending the ids %s", log_ids)
-            yield (log_ids, log_data)
+            yield RawSSLogs.create_raw_sslogs(log_ids, log_data)
 
     def start_server(self):
         print("The servers vars are", vars(self))

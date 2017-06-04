@@ -30,12 +30,12 @@ class PollingPlugin(DataPlugin):
         self.parser_objs = []
         self.pollingservice_objs = []
         self.log.debug("My polling config is %s", conf)
-        for parser_cfg in self.parsers:
-            self.log.debug("Loading the parser configuration %s", parser_cfg)
+        for parser_cfg in self.options['parsers']:
+            self.log.info("Loading the parser configuration %s", parser_cfg)
             parser_obj = self._load_plugin(parser_manager, parser_cfg)
             self.parser_objs.append(parser_obj)
-        for polling_service_cfg in self.datasources:
-            self.log.debug("Loading the polling service configuration %s", polling_service_cfg)
+        for polling_service_cfg in self.options['datasources']:
+            self.log.info("Loading the polling service configuration %s", polling_service_cfg)
             polling_obj = self._load_plugin(pollingservice_manager, polling_service_cfg)
             polling_obj.completed_folder = self.completed_folder
             self.pollingservice_objs.append(polling_obj)

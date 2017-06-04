@@ -108,17 +108,17 @@ class DataService(object):
         This function will load up parameters and append that particular config
         to the object as variables
         '''
-        self.__dict__.update(conf)
+        self.options = conf
         if not schema: schema = {}
         for key, value in schema.get('properties', {}).items():
             if value.get('default', None) != None:
-                if ((not hasattr(self, key))
-                        or (hasattr(self, key)
-                            and getattr(self, key) == None)):
-                    setattr(self, str(key), str(value.get('default')))
+                if ((key not in self.options)) or (key in self.options and self.options[key] == None):
+                    self.options[key] = str(value.get('default'))
 
         plugin_name = str(self.__class__).split('.')[-2]  # Strip plugin name
         if hasattr(self, 'source'):
             plugin_name = "{}-{}".format(plugin_name, self.source)
         self.log = setup_log(plugin_name, conf['log_level'])
-        self.root_dir = sdconfig.get('plugins', {}).get('data')
+        if sdconfig:
+            self.options['poll_rate'] = float(self.options['poll_rate'])
+            self.root_dir = sdconfig.get('plugins', {}).get('data')

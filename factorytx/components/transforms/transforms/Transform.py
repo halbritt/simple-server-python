@@ -153,7 +153,7 @@ class TransformAbstract(object):
         """ Finds dataframes and manipulates them according to my rules. """
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
-        log = setup_log(self.logname, self.log_level)
+        log = setup_log(self.logname, self.options['log_level'])
         sys.modules[self.__class__.__module__].log = log
         self.log = log
 
@@ -192,8 +192,8 @@ class TransformAbstract(object):
 
             # sleep by 0.1
             if self.is_empty():
-                print("My polltime is %s", self.polltime)
-                for _ in range(int(float(self.polltime) / 0.1)):
+                print("My poll rate is %s", self.options['poll_rate'])
+                for _ in range(int(float(self.options['poll_rate']) / 0.1)):
                     time.sleep(0.1)
                     if not self._running:
                         break

@@ -37,6 +37,7 @@ class DataPluginAbstract(object):
     __version__ = "0.1"
     __metaclass__ = ABCMeta
 
+    logname = 'DataPlugin'
     reconnect_timeout = 5  # seconds
     reconnect_attempts = float('inf')  # Keep retrying until connected
     lastvalue = None
@@ -100,7 +101,7 @@ class DataPluginAbstract(object):
 
     def _getSource(self):
         """ Goes and gets the source for this particular microservice. """
-        return self.source if hasattr(self, 'source') else "Unknown"
+        return self.options['source'] if 'source' in self.options else "Unknown"
 
     def encrypt(self, records):
         """ Given a set of RECORDS, completes at rest encryption and returns the records.
@@ -117,8 +118,8 @@ class DataPluginAbstract(object):
         :param cfg: The configuration block needed to load a plugin.
         """
         if 'config' in cfg:
-            cfg['config'].update({'source': self.source,
-                                  'resource_dict_location': self.resource_dict_location})
+            cfg['config'].update({'source': self.options['source'],
+                                  'resource_dict_location': self.options['resource_dict_location']})
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
@@ -143,13 +144,13 @@ class DataPluginAbstract(object):
                 json_data = json.dumps(records)
             except Exception as e:
                 self.log.info("The exception is %s, trying to pickle sslogs", e)
-        if not os.path.exists(self.outputdirectory):
-            os.makedirs(self.outputdirectory)
+        if not os.path.exists(self.options['outputdirectory']):
+            os.makedirs(self.options['outputdirectory'])
         # TODO: NEED TO GET THE TIMESTAMP OUT OF DATA BEFOREHAND
         timestamp = 'None' # Get earliest timestamp in data
         guid = utils.make_guid()
         fname = '_'.join((timestamp, self._getSource(), guid))
-        fname = os.path.join(self.outputdirectory, fname)
+        fname = os.path.join(self.options['outputdirectory'], fname)
         dst_fname = fname + '.sm.json'
         tmp_fname = fname + '.jsontemp'
         if os.name == 'nt':
@@ -165,7 +166,7 @@ class DataPluginAbstract(object):
                 pickle.dump(records, f)
         except Exception as e:
             log.error('Failed to save data into {} {} {}'.format(
-                self.outputdirectory, fname, e))
+                self.options['outputdirectory'], fname, e))
             raise
         else:
             self.log.info('Saved data into {}'.format(fname))
@@ -192,7 +193,7 @@ class DataPluginAbstract(object):
     def reconnect(self):
         self._connected = False
         self.perform_teardown()
-        self.log.warning('Connection lost to %s. Trying to reconnect to %s', self.host, self.logname)
+        self.log.warning('Connection lost to %s. Trying to reconnect to %s', self.options['host'], self.logname)
         count = 0
         keep_trying = True
         while keep_trying:
@@ -328,7 +329,7 @@ class DataPluginAbstract(object):
     def run(self):
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
-        log = setup_log(self.logname, self.log_level)
+        log = setup_log(self.logname, self.options['log_level'])
         sys.modules[self.__class__.__module__].log = log
         self.log = log
 
@@ -340,20 +341,20 @@ class DataPluginAbstract(object):
         # Create output directory if it is not created
         # todo, should have some (signal based?) way
         # to exit the service so we can join()
-        if not os.path.exists(self.outputdirectory):
-            os.makedirs(self.outputdirectory)
+        if not os.path.exists(self.options['outputdirectory']):
+            os.makedirs(self.options['outputdirectory'])
 
         try:
             self.connect()
         except Exception as e:
-            self.log.error('Failed to connect to {}'.format(self.host))
+            self.log.error('Failed to connect to {}'.format(self.options['host']))
             self.log.exception(e)
             self.reconnect()
 
         while self._running:
             self.log.info("%s: Looking for my data", self.logname)
             try:
-                self.log.info("%s: Detecting New Records", self.host)
+                self.log.info("%s: Detecting New Records", self.options['host'])
                 resources = self.read()
                 self.log.info("Found %s records, registering...", len(resources))
                 resources = self.register_resources(resources)
@@ -367,14 +368,16 @@ class DataPluginAbstract(object):
                 if not found_records:
                     self.log.info("Found no records to process on this run")
             except Exception as e:
-                self.log.exception('Failed to read data from "%s": %r', self.host, e)
+                self.log.exception('Failed to read data from "%s": %r', self.options['host'], e)
                 self._connected = False
                 self.reconnect()
                 continue
             self.log.info("Completed search for the data for the dataplugin %s", self.logname)
 
             # sleep by 0.1
-            for _ in range(int(self.poll_rate / 0.1)):
+            print("The vars that I haave are", vars(self))
+            print("The options I have are", self.options)
+            for _ in range(int(self.options['poll_rate'] / 0.1)):
                 self.callback_frames()
                 sleep(0.1)
                 if not self._running:
