@@ -4,7 +4,7 @@ from datetime import datetime
 from dateutil import parser
 import json
 from pandas import DataFrame
-from factorytx.components.dataplugins.resource import Resource
+from factorytx.components.dataplugins.resources.resource import Resource
 
 class RDP1Payload(Resource):
 
