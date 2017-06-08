@@ -30,42 +30,17 @@ class PollingPlugin(DataPlugin):
         self.parser_objs = []
         self.pollingservice_objs = []
         self.log.debug("My polling config is %s", conf)
-        for parser_cfg in self.options['parsers']:
-            self.log.info("Loading the parser configuration %s", parser_cfg)
-            parser_obj = self._load_plugin(parser_manager, parser_cfg)
-            self.parser_objs.append(parser_obj)
+        if 'parsers' in self.options:
+            for parser_cfg in self.options['parsers']:
+                self.log.info("Loading the parser configuration %s", parser_cfg)
+                parser_obj = self._load_plugin(parser_manager, parser_cfg)
+                self.parser_objs.append(parser_obj)
+        else:
+            self.log.warning("There doesn't seem to be any parsers configured, starting a forwarding service")
         for polling_service_cfg in self.options['datasources']:
             self.log.info("Loading the polling service configuration %s", polling_service_cfg)
             polling_obj = self._load_plugin(pollingservice_manager, polling_service_cfg)
-            polling_obj.completed_folder = self.completed_folder
             self.pollingservice_objs.append(polling_obj)
-
-    def read(self):
-        resource_entries = []
-        process_cnt = 0
-        self.log.info("Looking for files in the FileTransport object.")
-        for polling_obj in self.pollingservice_objs:
-            new_entries = polling_obj.poll()
-            found_entries = []
-            for resource in new_entries:
-                if resource[0][0] in self.resource_dict:
-                    self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
-                    continue
-                log.debug("Processing the resource %s", resource)
-                found_entries += [resource]
-            #ecept Exception as e:
-            #self.log.warn('Unable to list files: {}.'.format(e))
-            #return
-            self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
-            self.log.info('Found %s registered entries.', found_entries)
-            resource_entries.extend(new_entries)
-
-        if len(resource_entries) == 0:
-            self.log.info("Returning from read with no new entries to read. There are currently %s resources registered", len(self.resource_dict))
-            return []
-
-        resource_entries = sorted(resource_entries)
-        return resource_entries
 
     def process_resources(self, resources):
         processed, cnt, errors = [], 0, 0

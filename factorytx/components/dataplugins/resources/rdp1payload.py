@@ -4,9 +4,9 @@ from datetime import datetime
 from dateutil import parser
 import json
 from pandas import DataFrame
-from factorytx.components.dataplugins.resources.resource import Resource
+from factorytx.components.dataplugins.resources.rawresource import RawResource
 
-class RDP1Payload(Resource):
+class RDP1Payload(RawResource):
 
     def __init__(self, payload):
         data = payload['data'].split('--')

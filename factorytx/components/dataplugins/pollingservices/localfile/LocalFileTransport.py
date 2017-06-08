@@ -27,20 +27,6 @@ class LocalFileTransport(PollingServiceBase):
         path = os.path.join(self.root_path, file_entry.path)
         os.remove(path)
 
-    def list_files(self):
-        file_entries = []
-        for dirpath, dirnames, filenames in os.walk(self.root_path):
-            for filename in filenames:
-                path = os.path.join(dirpath, filename)
-                file_entry = FileEntry(
-                    transport=self,
-                    path=os.path.relpath(path, start=self.root_path),
-                    mtime=os.path.getmtime(path),
-                    size=os.path.getsize(path),
-                    root_path=self.root_path,
-                )
-                file_entries.append(file_entry)
-        return file_entries
 
     def prepare_resource(self, resource):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -68,7 +54,19 @@ class LocalFileTransport(PollingServiceBase):
         return FileEntry
 
     def get_all_resources(self):
-        return self.list_files()
+        file_entries = []
+        for dirpath, dirnames, filenames in os.walk(self.root_path):
+            for filename in filenames:
+                path = os.path.join(dirpath, filename)
+                file_entry = FileEntry(
+                    transport=self,
+                    path=os.path.relpath(path, start=self.root_path),
+                    mtime=os.path.getmtime(path),
+                    size=os.path.getsize(path),
+                    root_path=self.root_path,
+                )
+                file_entries.append(file_entry)
+        return file_entries
 
     def partition_resources(self, resources):
         return resources

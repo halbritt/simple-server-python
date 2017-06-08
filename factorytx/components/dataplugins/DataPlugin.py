@@ -75,10 +75,33 @@ class DataPluginAbstract(object):
         """
         super(DataPluginAbstract, self).load_parameters(sdconfig, schema, conf)
 
-    @abstractmethod
     def read(self):
-        """ This method must be defined in every plugin that subclasses the DataPlugin Class """
-        pass
+        resource_entries = []
+        process_cnt = 0
+        self.log.info("Looking for files in the FileTransport object.")
+        for polling_obj in self.pollingservice_objs:
+            new_entries = polling_obj.poll()
+            found_entries = []
+            for resource in new_entries:
+                if resource[0][0] in self.resource_dict:
+                    self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
+                    continue
+                self.log.debug("Processing the resource %s", resource)
+                found_entries += [resource]
+            #ecept Exception as e:
+            #self.log.warn('Unable to list files: {}.'.format(e))
+            #return
+            self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
+            self.log.info('Found %s registered entries.', found_entries)
+            resource_entries.extend(new_entries)
+
+        if len(resource_entries) == 0:
+            self.log.info("Returning from read with no new entries to read. There are currently %s resources registered", len(self.resource_dict))
+            return []
+
+        resource_entries = sorted(resource_entries)
+        return resource_entries
+
 
     @abstractmethod
     def remove_resource(self, resource_id):
@@ -118,12 +141,11 @@ class DataPluginAbstract(object):
         :param cfg: The configuration block needed to load a plugin.
         """
         if 'config' in cfg:
-            cfg['config'].update({'source': self.options['source'],
-                                  'resource_dict_location': self.options['resource_dict_location']})
+            cfg['config'].update({'source': self.options['source']})
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
-    def save_json(self, record_ids, records):
+    def save_json(self, records):
         """ Given some RECORD_IDS and a set of RECORDS, proceeds to save the records in order to
             maintain not losing any data.
 
@@ -134,42 +156,8 @@ class DataPluginAbstract(object):
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
-        try:
-            json_data = records.to_json()
-            raw_records = False
-        except AttributeError as e:
-            self.log.info("We are working with raw records")
-        if raw_records:
-            try:
-                json_data = json.dumps(records)
-            except Exception as e:
-                self.log.info("The exception is %s, trying to pickle sslogs", e)
-        if not os.path.exists(self.options['outputdirectory']):
-            os.makedirs(self.options['outputdirectory'])
-        # TODO: NEED TO GET THE TIMESTAMP OUT OF DATA BEFOREHAND
-        timestamp = 'None' # Get earliest timestamp in data
-        guid = utils.make_guid()
-        fname = '_'.join((timestamp, self._getSource(), guid))
-        fname = os.path.join(self.options['outputdirectory'], fname)
-        dst_fname = fname + '.sm.json'
-        tmp_fname = fname + '.jsontemp'
-        if os.name == 'nt':
-            fname = fname.replace(":", "_")
-        try:
-            with open(tmp_fname, 'w') as f:
-                f.write(json_data)
-            # rename .jsontemp to .sm.json
-            os.rename(tmp_fname, dst_fname)
-        except UnboundLocalError as e:
-            self.log.info("Pickling the data rather than dumping json.")
-            with open(tmp_fname, 'wb') as f:
-                pickle.dump(records, f)
-        except Exception as e:
-            log.error('Failed to save data into {} {} {}'.format(
-                self.options['outputdirectory'], fname, e))
-            raise
-        else:
-            self.log.info('Saved data into {}'.format(fname))
+        record_string = records.to_record_string()
+        print("The options for us are:", self.options)
         self.log.info("Registering the data frame %s, %s, %s", record_ids, guid, dst_fname)
         self.register_data_frame(record_ids, guid, dst_fname)
         new_records.append((record_ids, guid, records))
@@ -215,18 +203,10 @@ class DataPluginAbstract(object):
                         ''.format(self.reconnect_attempts))
 
     def emit_records(self, records):
-        records_id, records = records
-        self.log.debug("The record info is %s", records_id)
-        self.log.info("Emitting %s records for the plugin %s", len(records), self.logname)
-        self.log.info("Persisting %s records in JSON", len(records))
-        records = self.save_json(records_id, records)
+        print("The records are going to be", records)
+        records = self.save_json(records)
         self.log.info("Saved the JSON")
-        if len(records) > 0:
-            for record in records:
-                self.log.info("Passing the records with id %s onto the next component", record[0])
-                self.push_frame(record[0][0][1], record[1], record[2])
-        else:
-            self.log.info("There are no records to forward")
+        self.push_frame(records)
 
     def register_resources(self, resources):
         for resource, obj in resources:
@@ -254,29 +234,21 @@ class DataPluginAbstract(object):
         print("Converting the frame %s", frame.keys())
         return DataFrame(frame)
 
-    def push_frame(self, datasource, frame_id, frame):
+    def push_frame(self, frame):
         if self.validate_frame(frame):
-            frame_data = self.tx_dict[frame_id]
+            frame_data = self.tx_dict[frame.name]
             self.log.info("Transmitting the dataframe %s", frame_data)
             frame_data['transmission_time'] = tme()
-            self.tx_dict[frame_id] = frame_data
-            self.log.info("Marked the time for %s", frame_id)
-            self.out_pipe.put({'frame_id':frame_id, 'datasource':datasource, 'frame':frame})
-            self.log.info("Pushed out a new dataframe with %s indexes.", len(frame))
+            frame.frame_data = frame_data
+            self.tx_dict[frame.name] = frame
+            self.log.info("Marked the time for %s", frame)
+            self.out_pipe.put(frame)
         else:
             self.log.info("Failed to validate frame")
 
     def validate_frame(self, frame):
         # TODO: SOME ADEQUATE VALIDATION HERE
-        if isinstance(frame, DataFrame):
-            self.log.info("its a frame!")
-            return True
-        elif isinstance(frame, list):  # HACK
-            self.log.info("its a list of sslog dictionaries!")
-            return True
-        else:
-            self.log.info("Its not a frame.")
-            return False
+        return True
 
     @abstractmethod
     def process_resources(self, resources):
@@ -341,8 +313,6 @@ class DataPluginAbstract(object):
         # Create output directory if it is not created
         # todo, should have some (signal based?) way
         # to exit the service so we can join()
-        if not os.path.exists(self.options['outputdirectory']):
-            os.makedirs(self.options['outputdirectory'])
 
         try:
             self.connect()

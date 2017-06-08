@@ -59,11 +59,9 @@ class PollingServiceBase(metaclass=ABCMeta):
             conf = {}
         self.__dict__.update(conf)
         merge_schema_defaults(schema, self.__dict__)
-        log.info(self.resource_dict_location)
         print("The name config is", conf, vars(self))
         if not 'name' in conf:
             conf['name'] = str(uuid4())[:8]
-        resource_path = os.path.join(self.resource_dict_location, conf['name'])
         print("Creating the resource dictionaries")
         self.resources = {}
         self.last_registered = None
