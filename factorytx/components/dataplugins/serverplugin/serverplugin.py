@@ -6,7 +6,7 @@ import tempfile
 import time
 import logging
 
-from factorytx.components.dataplugins.PollingPlugin import PollingPlugin
+from factorytx.components.dataplugins.pollingplugin.pollingplugin import PollingPlugin
 from factorytx.managers.PluginManager import component_manager
 from factorytx import utils
 

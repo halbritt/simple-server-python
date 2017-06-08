@@ -152,16 +152,14 @@ class DataPluginAbstract(object):
         :param record_ids: One or more records that we used to compile the records.
         :param records: The result of parsing or loading uploaded data and formatting it correctly
         """
-        new_records = []
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
         record_string = records.to_record_string()
         print("The options for us are:", self.options)
-        self.log.info("Registering the data frame %s, %s, %s", record_ids, guid, dst_fname)
-        self.register_data_frame(record_ids, guid, dst_fname)
-        new_records.append((record_ids, guid, records))
-        return new_records
+        self.log.info("Registering the records %s that we have persisted", records)
+        self.register_data_frame(records)
+        return records
 
     @property
     def connected(self):
@@ -238,8 +236,7 @@ class DataPluginAbstract(object):
         if self.validate_frame(frame):
             frame_data = self.tx_dict[frame.name]
             self.log.info("Transmitting the dataframe %s", frame_data)
-            frame_data['transmission_time'] = tme()
-            frame.frame_data = frame_data
+            frame_data.transmission_time = tme()
             self.tx_dict[frame.name] = frame
             self.log.info("Marked the time for %s", frame)
             self.out_pipe.put(frame)
@@ -254,12 +251,10 @@ class DataPluginAbstract(object):
     def process_resources(self, resources):
         pass
 
-    def register_data_frame(self, resource_id, data_frame_id, fname):
-        self.log.info("Registering the dataframe with resource id %s", resource_id)
-        self.tx_dict[data_frame_id] = {'registration_time':tme(),
-                                       'resource_id': [x[0] for x in resource_id],
-                                       'datasource':resource_id[0][1], 'frame_path': fname}
-        self.log.info("Sucessfuly registered the resources %s to chunk %s", resource_id, data_frame_id)
+    def register_data_frame(self, records):
+        self.log.info("Registering the dataframe with resource id %s", records.resource_ids)
+        self.tx_dict[records.name] = records
+        self.log.info("Sucessfuly registered the resources %s", records)
 
     def over_time(self, name):
         if name in self.resource_dict:
@@ -274,7 +269,7 @@ class DataPluginAbstract(object):
         completed_resources = []
         for key in in_keys:
             if key in self.tx_dict:
-                todo = self.tx_dict[key]['resource_id']
+                todo = self.tx_dict[key].resource_ids
                 completed = []
                 self.log.info("Found the callback info %s with key %s", self.tx_dict[key], key)
                 for resource_id in todo:
@@ -292,8 +287,8 @@ class DataPluginAbstract(object):
         for key in completed_resources:
             self.log.info("Deleting the key %s from persistence", key)
             del self.in_pipe[key]
-            resource_data = self.tx_dict[key]['resource_id']
-            for resource_id in resource_data:
+            resource_data = self.tx_dict[key]
+            for resource_id in resource_data.resource_ids:
                 if resource_id in self.resource_dict:
                     del self.resource_dict[resource_id]
             del self.tx_dict[key]

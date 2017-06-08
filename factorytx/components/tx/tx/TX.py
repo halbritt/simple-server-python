@@ -95,11 +95,11 @@ class TXAbstract(object):
         frame_info = self.tx_ref[frame_id]
         print("The tx objects are", self.tx_objs)
         for tx in self.tx_objs:
-            print("The tx data reference is %s", tx.data_reference)
+            datasource_names = [x['name'] for x in tx.options['datasources']]
+            print("The options for my tx data are %s", tx.options['datasources'])
             print("The datasource is %s", datasource)
-            if datasource in tx.data_reference:
-                data = tx.data_reference[datasource]
-                log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
+            if datasource in datasource_names:
+                log.info("The datasource name is %s and this tx handles it.", datasource)
                 confirmation = tx.TX(dataframe, size)
                 if confirmation:
                     log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
@@ -145,7 +145,7 @@ class TXAbstract(object):
 
         """
         log.info("Persisting the frame %s", frame_id)
-        path = os.path.join(self.tx_persistence_location, str(frame_id))
+        path = os.path.join(self.options['tx_persistence_location'], str(frame_id))
         try:
             with open(path, 'w') as f:
                 log.info("Writing to the path %s", path)
@@ -219,8 +219,8 @@ class TXAbstract(object):
                 if not self.is_empty():
                     log.info("Getting Next TX")
                     res = self.get_next_tx()
-                    log.info("The first tx arg is %s", res['frame_id'])
-                    logs = res['frame']
+                    log.info("The first tx arg is %s", res.name)
+                    logs = res.resource_data
                     log.info("The sslogs are of length %s", len(logs))
                     running_size = 0
                     for sslog_data in logs:
@@ -232,11 +232,11 @@ class TXAbstract(object):
                     tx_done = False
                     while not tx_done:
                         self.log.info("Transmitting tx with running size %s", running_size)
-                        tx_status = self.tx_frame(res['datasource'], res['frame_id'], res['frame'], running_size)
+                        tx_status = self.tx_frame(res.datasource, res.name, res.resource_data, running_size)
                         if not tx_status:
-                            log.error("The TX %s was unable to send to all of its RDP receivers", res['frame_id'])
+                            log.error("The TX %s was unable to send to all of its RDP receivers", res.name)
                         else:
-                            log.info("Sucessfully TXed the frame %s.", res['frame_id'])
+                            log.info("Sucessfully TXed the frame %s.", res.name)
                             tx_done = True
                     log.info("Moving on to a new TX")
             except Exception as e:
