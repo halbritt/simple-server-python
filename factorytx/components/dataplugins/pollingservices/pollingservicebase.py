@@ -51,18 +51,20 @@ class PollingServiceBase(metaclass=ABCMeta):
     def setup_log(self, logname):
         log.debug("My params are %s.", vars(self))
         if not getattr(self, 'plugin_type', []):
-            self.plugin_type = self.protocol
+            self.plugin_type = self.options['protocol']
         self.log = logging.getLogger(self.plugin_type + ': ' + logname)
 
     def load_parameters(self, schema, conf):
         if conf is None:
             conf = {}
-        self.__dict__.update(conf)
-        merge_schema_defaults(schema, self.__dict__)
-        print("The name config is", conf, vars(self))
+        conf_dict = {}
+        conf_dict.update(conf)
+        merge_schema_defaults(schema, conf_dict)
         if not 'name' in conf:
+            self.log.error("This polling service doesn't have a Name", vars(self))
             conf['name'] = str(uuid4())[:8]
         print("Creating the resource dictionaries")
+        self.options = conf_dict
         self.resources = {}
         self.last_registered = None
 
@@ -70,12 +72,11 @@ class PollingServiceBase(metaclass=ABCMeta):
         """ A RESOURCE MUST BE A SERIALIZEABLE DICTIONARY WHICH ADEQUATELY DEFINES THE PARAMETERS
             FOR THE RESOURCE. """
         # TODO: URL type identifier for a resource, not just random string
-        uid = str(uuid4())
         print("Registering %s, with name %s", resource, resource.name)
         print("The resource dictionary is %s", self.resources)
         resource_encoding = resource.encode('utf8')
         self.resources[resource_encoding] = resource_encoding
-        return resource, resource_encoding, self.name, resource.mtime
+        return resource, resource_encoding, self.options['name'], resource.mtime
 
     def get_resource(self, uid):
         """ Gets a resource by a uid.

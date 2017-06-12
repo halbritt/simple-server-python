@@ -22,10 +22,6 @@ class ServerPlugin(PollingPlugin):
 
     def load_parameters(self, sdconfig, schema, conf):
         super(ServerPlugin, self).load_parameters(sdconfig, schema, conf)
-        print(conf)
-        #server_conf = {'type':conf['protocol'], 'config':conf}
-        #self.server = super(ServerPlugin, self)._load_plugin(poll_manager, server_conf)
-        #self.pollingservice_objs = [self.server]
         self.server = self.pollingservice_objs[0]
         print("The final pollingservices are %s", self.pollingservice_objs)
 
@@ -40,30 +36,6 @@ class ServerPlugin(PollingPlugin):
 
     def perform_teardown(self):
         self.server.stop()
-
-#    def read(self):
-#        file_entries = []
-#        process_cnt = 0
-#        self.log.info("Looking for uploads from my server.")
-#        new_entries = self.server.poll()
-#        found_entries = []
-#        self.log.info('Found %d entries from polling_server', len(new_entries))
-#        self.log.info("The records say we have entries %s", [x for x in self.resource_dict.items()])
-#        for resource in new_entries:
-#            if resource[0][0] in self.resource_dict:
-#                self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
-#                continue
-#            self.log.debug("Processing the resource %s", resource)
-#            found_entries += [resource]
-#        self.log.info('Found %s entries registered by my server.', found_entries)
-#        file_entries.extend(new_entries)
-#
-#        if len(file_entries) == 0:
-#            self.log.info("Returning from read with no new entries to read. There are currently %s resources registered", len(self.resource_dict))
-#            return []
-#
-#        file_entries = sorted(file_entries, key=lambda e: e[-1])
-#        return file_entries
 
     def process_resources(self, resources):
         log_ids = []

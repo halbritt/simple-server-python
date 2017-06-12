@@ -56,18 +56,16 @@ class PollingPlugin(DataPlugin):
 
     def process(self, resource_id, resource):
         log.debug("Processing the resource %s", resource)
-        time = resource.mtime
-        polling_service = resource.transport
-        parsed = False
-        log.debug("Trying to process the entry %s", resource)
-        records = self.process_resource(resource, polling_service)
+        records = self.process_resource(resource)
         log.debug("Found some records with %s columns", len(records))
         log.debug("Trying to save the resource with the right id %s", resource_id)
         return ([resource_id], records)
 
-    def process_resource(self, resource, polling_service):
+    def process_resource(self, resource):
         log.info("The resource to be processed is %s", resource)
         for parser_obj in self.parser_objs:
+            self.log.info("The parser %s has datasources %s", parser_obj, parserobj.datasources)
+            self.log.info("The resource we are processing has vars", resource.keys())
             if not polling_service.name in parser_obj.datasources:
                 log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
                 continue

@@ -6,18 +6,24 @@ import tempfile
 
 from factorytx.components.dataplugins.pollingservices.pollingservicebase import PollingServiceBase
 from factorytx.components.dataplugins.resources.fileentry import FileEntry
+from factorytx.components.dataplugins.pollingservices.filepolling.fileprotocols import FILE_PROTOCOLS
 
 
-class LocalFileTransport(PollingServiceBase):
 
-    logname = 'LocalFileTransport'
+class FilePolling(PollingServiceBase):
+
+    logname = 'FilePolling Service'
 
     def load_parameters(self, schema, conf):
-        super(LocalFileTransport, self).load_parameters(schema, conf)
-        print("The configuration for this Localfile transport is %s", conf)
+        super(FilePolling, self).load_parameters(schema, conf)
+        print("The configuration for this FilePolling service is %s", conf)
         logname = ': '.join([self.logname, conf['name']])
-        super(LocalFileTransport, self).setup_log(logname)
-        self.root_path = os.path.abspath(self.root_path)
+        super(FilePolling, self).setup_log(logname)
+        if conf['type'] in FILE_PROTOCOLS:
+            self.resource_type = FILE_PROTOCOLS[conf['type']]
+        else:
+            self.log.error("THERE WAS NO PROTOCOL FOUND FOR TYPE %s POLLING SERVICE", conf['type'])
+        self.root_path = os.path.abspath(self.options['root_path'])
 
     def copy_file(self, file_entry, local_path):
         path = os.path.join(self.root_path, file_entry.path)
@@ -26,7 +32,6 @@ class LocalFileTransport(PollingServiceBase):
     def delete_file(self, file_entry):
         path = os.path.join(self.root_path, file_entry.path)
         os.remove(path)
-
 
     def prepare_resource(self, resource):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -39,7 +44,7 @@ class LocalFileTransport(PollingServiceBase):
                 self.log.error("There was an error processing %s: %s", temp_file.name, e)
             file_size = os.path.getsize(temp_file.name)
             self.log.info("Copied %s bytes from remote file %s to %s", file_size, resource.path, temp_file.name)
-            completed_path = os.path.join(self.completed_folder, os.path.basename(resource.path))
+            completed_path = os.path.join(self.data_store, os.path.basename(resource.path))
             self.log.info("Found the completed path %s", completed_path)
             resource.completed_path = completed_path
             resource.temp_file = temp_file.name
@@ -55,8 +60,10 @@ class LocalFileTransport(PollingServiceBase):
 
     def get_all_resources(self):
         file_entries = []
+        self.log.info("Retriving resources from the root %s", self.root_path)
         for dirpath, dirnames, filenames in os.walk(self.root_path):
             for filename in filenames:
+                self.log.info("Creating a new object with type %s", self.resource_type)
                 path = os.path.join(dirpath, filename)
                 file_entry = FileEntry(
                     transport=self,

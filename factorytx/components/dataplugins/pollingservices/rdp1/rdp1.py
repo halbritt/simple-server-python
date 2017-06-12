@@ -4,13 +4,13 @@ import shutil
 import logging
 import tempfile
 
-from factorytx.components.dataplugins.pollingservices.localfile.LocalFileTransport import LocalFileTransport
+from factorytx.components.dataplugins.pollingservices.filepolling import FilePolling
 from factorytx.components.dataplugins.resources.rdp1payload import RDP1Payload
 from factorytx.components.dataplugins.resources.rdp1logs import RDP1Logs
 from factorytx.components.dataplugins.serverservices.rdp1server import RDP1Server
 
 
-class RDP1(LocalFileTransport):
+class RDP1(FilePolling):
 
     logname = 'RDP1 Stream'
 
@@ -48,10 +48,10 @@ class RDP1(LocalFileTransport):
 
     def get_all_resources(self):
         """ Gets all of the resources that I haven't registered previously. """
-        print("The resource keys are", [x for x in self.resources.keys()])
+        self.log.info("The resource keys are %s", [x for x in self.resources.keys()])
+        self.log.info("Returning the resources from the path %s", self.root_path)
         new_resources = []
         for dirs, paths, filename in os.walk(self.root_path):
-            if paths: continue
             print("Found the entry %s", dirs, paths, filename)
             for fle in filename:
                 if fle in self.resources:
@@ -62,7 +62,7 @@ class RDP1(LocalFileTransport):
                 binary_name = fle + 'binaryattachment'
                 if header_name in filename:
                     print("Making the rdp1 payload with vars %s.", vars(self))
-                    resource = {'headers':header_name, 'data':fle, 'path': self.root_path, 'poll': self.name}
+                    resource = {'headers':header_name, 'data':fle, 'path': self.root_path, 'poll': self.options['name']}
                     if binary_name in filename:
                         resource['binaryattachment'] = binary_name
                     resource = RDP1Payload(resource)
