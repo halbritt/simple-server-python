@@ -87,21 +87,7 @@ class DataPluginAbstract(object):
                     self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
                     continue
                 self.log.debug("Processing the resource %s", resource)
-                found_entries += [resource]
-            #ecept Exception as e:
-            #self.log.warn('Unable to list files: {}.'.format(e))
-            #return
-            self.log.info('Found %d entries from polling_service %s', len(new_entries), new_entries)
-            self.log.info('Found %s registered entries.', found_entries)
-            resource_entries.extend(new_entries)
-
-        if len(resource_entries) == 0:
-            self.log.info("Returning from read with no new entries to read. There are currently %s resources registered", len(self.resource_dict))
-            return []
-
-        resource_entries = sorted(resource_entries)
-        return resource_entries
-
+                yield resource
 
     @abstractmethod
     def remove_resource(self, resource_id):
@@ -201,16 +187,17 @@ class DataPluginAbstract(object):
                         ''.format(self.reconnect_attempts))
 
     def emit_records(self, records):
-        print("The records are going to be", records)
         records = self.save_json(records)
         self.log.info("Saved the JSON")
         self.push_frame(records)
 
     def register_resources(self, resources):
-        for resource, obj in resources:
+        for res in resources:
+            print("The res is %s", res)
+            resource, obj = res
             self.log.info("Registering %s", resource)
             self.resource_dict[resource[0]] = obj.encode("utf-8")
-        return resources
+            yield res
 
     def cleanup_frame(self, frame_id):
         frame_info = self.tx_dict[frame_id]
@@ -321,7 +308,7 @@ class DataPluginAbstract(object):
             try:
                 self.log.info("%s: Detecting New Records", self.options['host'])
                 resources = self.read()
-                self.log.info("Found %s records, registering...", len(resources))
+                self.log.info("Found possible records, registering...")
                 resources = self.register_resources(resources)
                 self.log.info("Registered the records, now processing")
                 processed = self.process_resources(resources)
@@ -340,8 +327,6 @@ class DataPluginAbstract(object):
             self.log.info("Completed search for the data for the dataplugin %s", self.logname)
 
             # sleep by 0.1
-            print("The vars that I haave are", vars(self))
-            print("The options I have are", self.options)
             for _ in range(int(self.options['poll_rate'] / 0.1)):
                 self.callback_frames()
                 sleep(0.1)

@@ -47,6 +47,7 @@ class ServerPlugin(PollingPlugin):
         log_data = []
         resource_class = self.server.return_aggregate_class()
         for resource in resources:
+            self.log.info("Processing the resource %s", resource)
             rec_id, rec_data = resource[0], resource[1].load_resource()
             self.log.info("Aggregating the logs corresponding to id %s", rec_id)
             sslogs = rec_data[0]
