@@ -113,12 +113,11 @@ class DataService(object):
         for key, value in schema.get('properties', {}).items():
             if value.get('default', None) != None:
                 if ((key not in self.options)) or (key in self.options and self.options[key] == None):
-                    self.options[key] = str(value.get('default'))
+                    self.options[key] = value.get('default')
 
         plugin_name = str(self.__class__).split('.')[-2]  # Strip plugin name
         if hasattr(self, 'source'):
             plugin_name = "{}-{}".format(plugin_name, self.source)
         self.log = setup_log(plugin_name, conf['log_level'])
         if sdconfig:
-            self.options['poll_rate'] = float(self.options['poll_rate'])
             self.root_dir = sdconfig.get('plugins', {}).get('data')
