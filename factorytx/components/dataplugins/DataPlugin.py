@@ -81,7 +81,6 @@ class DataPluginAbstract(object):
         self.log.info("Looking for files in the FileTransport object.")
         for polling_obj in self.pollingservice_objs:
             new_entries = polling_obj.poll()
-            found_entries = []
             for resource in new_entries:
                 if resource[0][0] in self.resource_dict:
                     self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
@@ -132,8 +131,8 @@ class DataPluginAbstract(object):
         return obj
 
     def save_json(self, records):
-        """ Given some RECORD_IDS and a set of RECORDS, proceeds to save the records in order to
-            maintain not losing any data.
+        """ Given some a set of RECORDS with type ProcessedResource, proceeds to save the records 
+            in order to maintain not losing any data.
 
         :param record_ids: One or more records that we used to compile the records.
         :param records: The result of parsing or loading uploaded data and formatting it correctly
