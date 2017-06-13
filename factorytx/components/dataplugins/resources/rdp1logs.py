@@ -1,5 +1,6 @@
 import os
 import pickle
+from uuid import uuid4
 from bson import objectid
 from datetime import datetime
 from dateutil import parser
@@ -15,6 +16,7 @@ class RDP1Logs(ProcessedResource):
         self.resource_ids = [x[0] for x in resource_ids]
         self.datasource = resource_ids[0][1]
         self.plugin_type = resource_ids[0][2]
+        self.uuid = str(uuid4())
         self.sslog_list = sslog_list
         self.resource_data = sslog_list
         self.create_time = datetime.utcnow().isoformat()
@@ -30,7 +32,7 @@ class RDP1Logs(ProcessedResource):
 
     def encode(self, encoding):
         print("Trying to encode the RAWLOGS", self.create_time, self.resource_ids)
-        return self.create_time + '--' + '::'.join(self.resource_ids)
+        return self.create_time + '--' + self.uuid
 
     def to_record_string(self):
         try:

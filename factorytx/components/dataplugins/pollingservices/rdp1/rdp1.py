@@ -46,29 +46,6 @@ class RDP1(FilePolling):
                 print("Couldn't find the path to remove for resource %s", resource_id)
         return False
 
-    def get_all_resources(self):
-        """ Gets all of the resources that I haven't registered previously. """
-        self.log.info("The resource keys are %s", [x for x in self.resources.keys()])
-        self.log.info("Returning the resources from the path %s", self.root_path)
-        new_resources = []
-        for dirs, paths, filename in os.walk(self.root_path):
-            print("Found the entry %s", dirs, paths, filename)
-            for fle in filename:
-                if fle in self.resources:
-                    print("The resource %s has already been returned.", fle)
-                    continue
-                if fle.endswith('headers'): continue
-                header_name = fle + 'headers'
-                binary_name = fle + 'binaryattachment'
-                if header_name in filename:
-                    print("Making the rdp1 payload with vars %s.", vars(self))
-                    resource = {'headers':header_name, 'data':fle, 'path': self.root_path, 'poll': self.options['name']}
-                    if binary_name in filename:
-                        resource['binaryattachment'] = binary_name
-                    resource = RDP1Payload(resource)
-                    new_resources.append(resource)
-        return sorted(new_resources)
-
     def start(self, host, port, apikeys):
         self.server = RDP1Server.start_server(host, port, self.root_path, apikeys)
 
