@@ -19,8 +19,10 @@ class FilePolling(PollingServiceBase):
         print("The configuration for this FilePolling service is %s", conf)
         logname = ': '.join([self.logname, conf['name']])
         super(FilePolling, self).setup_log(logname)
-        if conf['type'] in FILE_PROTOCOLS:
-            self.resource_type = FILE_PROTOCOLS[conf['type']]
+        resource_type = conf['type']
+        if resource_type in FILE_PROTOCOLS:
+            self.resource_type = FILE_PROTOCOLS[resource_type]['type']
+            self.resource_metafiles = FILE_PROTOCOLS[resource_type]['metafiles']
         else:
             self.log.error("THERE WAS NO PROTOCOL FOUND FOR TYPE %s POLLING SERVICE", conf['type'])
         self.root_path = os.path.abspath(self.options['root_path'])
@@ -59,21 +61,33 @@ class FilePolling(PollingServiceBase):
         return FileEntry
 
     def get_all_resources(self):
-        file_entries = []
-        self.log.info("Retriving resources from the root %s", self.root_path)
-        for dirpath, dirnames, filenames in os.walk(self.root_path):
-            for filename in filenames:
-                self.log.info("Creating a new object with type %s", self.resource_type)
-                path = os.path.join(dirpath, filename)
-                file_entry = FileEntry(
-                    transport=self,
-                    path=os.path.relpath(path, start=self.root_path),
-                    mtime=os.path.getmtime(path),
-                    size=os.path.getsize(path),
-                    root_path=self.root_path,
-                )
-                file_entries.append(file_entry)
-        return file_entries
+        """ Gets all of the resources that I haven't registered previously. """
+        self.log.info("The resource keys are %s", [x for x in self.resources.keys()])
+        self.log.info("Returning the resources from the path %s", self.root_path)
+        new_resources = []
+        for dirs, paths, filename in os.walk(self.root_path):
+            print("Found the entry %s", dirs, paths, filename)
+            for fle in filename:
+                if fle in self.resources:
+                    print("The resource %s has already been returned.", fle)
+                    continue
+                metanames = []
+                original = True
+                for metafile in self.resource_metafiles:
+                    print("Searching for the metafile", metafile, fle)
+                    if fle.endswith(metafile):
+                        original = False
+                        continue
+                    if fle + metafile in filename:
+                        metanames.append(fle + metafile)
+                if original:
+                    resource = {'data': fle, 'path': self.root_path, 'poll': self.options['name']}
+                    for i, metafile in enumerate(metanames):
+                        resource[self.resource_metafiles[i]] = metafile
+                    print("Creating a new resource with dict %s", resource)
+                    resource = self.resource_type(resource)
+                    new_resources.append(resource)
+        return sorted(new_resources)
 
     def partition_resources(self, resources):
         return resources

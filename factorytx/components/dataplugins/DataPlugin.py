@@ -16,6 +16,7 @@ from factorytx.Global import setup_log
 from factorytx import utils
 from pandas import DataFrame
 from itertools import chain
+from factorytx.components.dataplugins.resources.processedresource import ProcessedResource
 GLOBAL_MANAGER = global_manager()
 
 
@@ -89,7 +90,7 @@ class DataPluginAbstract(object):
                 yield resource
 
     @abstractmethod
-    def remove_resource(self, resource_id):
+    def remove_resource(self, resource_id: str):
         """ Given a RESOURCE_ID, adequately removes a resource from persistence.
 
         :param resource_id: An id that is returned by a subclass a resource.
@@ -130,11 +131,10 @@ class DataPluginAbstract(object):
         obj = super(DataPluginAbstract, self)._load_plugin(manager, cfg)
         return obj
 
-    def save_json(self, records):
+    def save_json(self, records: ProcessedResource):
         """ Given some a set of RECORDS with type ProcessedResource, proceeds to save the records 
             in order to maintain not losing any data.
 
-        :param record_ids: One or more records that we used to compile the records.
         :param records: The result of parsing or loading uploaded data and formatting it correctly
         """
         print("The records we are saving have length %s", len(records))
