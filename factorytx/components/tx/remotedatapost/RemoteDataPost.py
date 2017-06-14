@@ -42,10 +42,14 @@ class RemoteDataPost(BaseTX):
         txed = False
         while not txed:
             self.log.info("Submitting a payload")
-            tx_init = datetime.utcnow().isoformat()
+            tx_init = datetime.utcnow()
             ship = self.send_http_request(payload)
-            tx_finish = datetime.utcnow().isoformat()
-            self.log.info("The transmission start is %s and finish is %s", tx_init, tx_finish)
+            tx_finish = datetime.utcnow()
+            duration_seconds = (tx_finish - tx_init).total_seconds()
+            size_kb = len(payload) / 1024.0
+            self.log.info("Transmission took %.3f seconds for %d sslogs / %.1f KB (starting at %s.) "
+                          "Throughput: %.1f KB / s", duration_seconds, len(data), size_kb,
+                          tx_init.isoformat(), size_kb / duration_seconds)
             if ship['code'] < 200 or ship['code'] >= 300:
                 self.log.info("Failed to tx the data of size %s because of a status code %s from the server.",
                               size, ship['code'])
