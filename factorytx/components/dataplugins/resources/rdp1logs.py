@@ -12,13 +12,13 @@ class RDP1Logs(ProcessedResource):
 
     transformable = False
 
-    def __init__(self, resource_ids, sslog_list):
+    def __init__(self, resource_ids, resource_data):
         self.resource_ids = [x[0] for x in resource_ids]
         self.datasource = resource_ids[0][1]
         self.plugin_type = resource_ids[0][2]
         self.uuid = str(uuid4())
-        self.sslog_list = sslog_list
-        self.resource_data = sslog_list
+        self.sslog_list = resource_data['sslog_list']
+        self.resource_data = resource_data['sslog_list']
         self.create_time = datetime.utcnow().isoformat()
         self.name = self.encode('utf8')
         self.index = 0
@@ -26,9 +26,6 @@ class RDP1Logs(ProcessedResource):
     @property
     def basename(self):
         return self.name
-
-    def factory_method(ids, log_list):
-        return RDP1Logs(ids, log_list)
 
     def encode(self, encoding):
         print("Trying to encode the RAWLOGS", self.create_time, self.resource_ids)

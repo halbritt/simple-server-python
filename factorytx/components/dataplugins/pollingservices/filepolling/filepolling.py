@@ -19,12 +19,12 @@ class FilePolling(PollingServiceBase):
         print("The configuration for this FilePolling service is %s", conf)
         logname = ': '.join([self.logname, conf['name']])
         super(FilePolling, self).setup_log(logname)
-        resource_type = conf['type']
+        resource_type = conf['protocol']
         if resource_type in FILE_PROTOCOLS:
             self.resource_type = FILE_PROTOCOLS[resource_type]['type']
             self.resource_metafiles = FILE_PROTOCOLS[resource_type]['metafiles']
         else:
-            self.log.error("THERE WAS NO PROTOCOL FOUND FOR TYPE %s POLLING SERVICE", conf['type'])
+            self.log.error("THERE WAS NO PROTOCOL FOUND FOR TYPE %s POLLING SERVICE", conf['protocol'])
         self.root_path = os.path.abspath(self.options['root_path'])
 
     def copy_file(self, file_entry, local_path):

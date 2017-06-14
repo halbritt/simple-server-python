@@ -58,7 +58,7 @@ class ServerPlugin(PollingPlugin):
                 if attachment_info['original_size'] > max_size or attachment_info['original_size'] > max_size - running_size:
                     self.log.info("The resource %s goes over the running max or is itself bigger than the max size.", rec_id)
                     if log_ids:
-                        yield resource_class.factory_method(log_ids, log_data)
+                        yield resource_class(log_ids, {'sslog_list': log_data})
                         log_ids = []
                         log_data = []
                         running_size = 0
@@ -68,7 +68,7 @@ class ServerPlugin(PollingPlugin):
                         if attachment_info['original_size'] > max_size:
                             self.log.error("The attachment size %s is bigger than the max aggregate size %s, appending singleton!",
                                            attachment_info['original_size'], max_size)
-                            yield resource_class.factory_method([rec_id], log_dict)
+                            yield resource_class([rec_id], {'sslog_list': log_dict})
                         else:
                             self.log.info("The attachment size %s is bigger than the running size of %s", attachment_info['original_size'], running_size)
                             log_ids.append(rec_id)
@@ -85,7 +85,7 @@ class ServerPlugin(PollingPlugin):
                         running_logs += 1
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
-                yield resource_class.factory_method(log_ids, log_data)
+                yield resource_class(log_ids, {'sslog_list': log_data})
                 log_ids = [rec_id]
                 log_data = []
                 log_data.extend(sslogs.values())
@@ -98,4 +98,4 @@ class ServerPlugin(PollingPlugin):
                 log_ids.append(rec_id)
         if log_ids:
             self.log.info("Appending the ids %s", log_ids)
-            yield resource_class.factory_method(log_ids, log_data)
+            yield resource_class(log_ids, {'sslog_list': log_data})

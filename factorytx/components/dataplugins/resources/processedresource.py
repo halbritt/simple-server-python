@@ -7,5 +7,5 @@ class ProcessedResource(Resource, metaclass=ABCMeta):
     transformable = True
 
     @abstractmethod
-    def factory_method(resource_ids, resource_data):
+    def to_record_string(self):
         pass
