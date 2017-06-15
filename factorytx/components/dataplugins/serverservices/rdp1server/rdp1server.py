@@ -78,9 +78,6 @@ class RDP1Server:
         try:
             if len(body) == 0:
                 raise Exception("There is no payload length to this body")
-            with open(os.path.join(self.data_store, file_name), 'wb') as f:
-                print("Persisting the file %s", file_name)
-                f.write(rawbody)
             with open(os.path.join(self.data_store, file_name + 'headers'), 'w') as f:
                 print("Persisting the headers")
                 headers = cherrypy.request.headers
@@ -91,6 +88,9 @@ class RDP1Server:
                     headers['original_size'] = orig_size
                 headers = json.dumps(cherrypy.request.headers)
                 f.write(headers)
+            with open(os.path.join(self.data_store, file_name), 'wb') as f:
+                print("Persisting the file %s", file_name)
+                f.write(rawbody)
             response_dic = {"valid_count": valid_count, "last_reject_id": None, "reject_count": 0,
                             "last_valid_id": last_id, "timestamp": datetime.utcnow().isoformat(),
                             "valid": True, "reject_errors": [], "id": last_id}
