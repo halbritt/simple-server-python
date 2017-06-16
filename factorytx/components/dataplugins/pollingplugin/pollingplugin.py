@@ -32,12 +32,16 @@ class PollingPlugin(DataPlugin):
         self.log.debug("My polling config is %s", conf)
         if 'parsers' in self.options:
             for parser_cfg in self.options['parsers']:
+                if not 'log_level' in parser_cfg:
+                    parser_cfg['config']['log_level'] = conf['log_level']
                 self.log.info("Loading the parser configuration %s", parser_cfg)
                 parser_obj = self._load_plugin(parser_manager, parser_cfg)
                 self.parser_objs.append(parser_obj)
         else:
             self.log.warning("There doesn't seem to be any parsers configured, starting a forwarding service")
         for polling_service_cfg in self.options['datasources']:
+            if not 'log_level' in polling_service_cfg:
+                polling_service_cfg['config']['log_level'] = conf['log_level']
             self.log.info("Loading the polling service configuration %s", polling_service_cfg)
             polling_obj = self._load_plugin(pollingservice_manager, polling_service_cfg)
             self.pollingservice_objs.append(polling_obj)

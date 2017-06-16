@@ -8,17 +8,14 @@ from factorytx.components.dataplugins.pollingservices.pollingservicebase import 
 from factorytx.components.dataplugins.resources.fileentry import FileEntry
 from factorytx.components.dataplugins.pollingservices.filepolling.fileprotocols import FILE_PROTOCOLS
 
-
+logname = 'FilePolling Service'
 
 class FilePolling(PollingServiceBase):
 
-    logname = 'FilePolling Service'
-
     def load_parameters(self, schema, conf):
+        conf['logname'] = ': '.join([logname, conf['logname']])
         super(FilePolling, self).load_parameters(schema, conf)
-        print("The configuration for this FilePolling service is %s", conf)
-        logname = ': '.join([self.logname, conf['name']])
-        super(FilePolling, self).setup_log(logname)
+        self.log.info("The configuration for this FilePolling service is %s", conf)
         resource_type = conf['protocol']
         if resource_type in FILE_PROTOCOLS:
             self.resource_type = FILE_PROTOCOLS[resource_type]['type']
@@ -62,19 +59,19 @@ class FilePolling(PollingServiceBase):
 
     def get_all_resources(self):
         """ Gets all of the resources that I haven't registered previously. """
-        self.log.info("The resource keys are %s", [x for x in self.resources.keys()])
+        self.log.info("We have %s registered resources in this polling service", len(self.resources.keys()))
         self.log.info("Returning the resources from the path %s", self.root_path)
         new_resources = []
         for dirs, paths, filename in os.walk(self.root_path):
-            print("Found the entry %s", dirs, paths, filename)
+            self.log.debug("Found the entry %s", (dirs, paths, filename))
             for fle in filename:
                 if fle in self.resources:
-                    print("The resource %s has already been returned.", fle)
+                    self.log.info("The resource %s has already been returned.", fle)
                     continue
                 metanames = []
                 original = True
                 for metafile in self.resource_metafiles:
-                    print("Searching for the metafile", metafile, fle)
+                    self.log.debug("Searching for the metafile type %s with file %s", metafile, fle)
                     if fle.endswith(metafile):
                         original = False
                         continue
@@ -84,7 +81,7 @@ class FilePolling(PollingServiceBase):
                     resource = {'data': fle, 'path': self.root_path, 'poll': self.options['name']}
                     for i, metafile in enumerate(metanames):
                         resource[self.resource_metafiles[i]] = metafile
-                    print("Creating a new resource with dict %s", resource)
+                    self.log.debug("Creating a new resource with dict %s", resource)
                     resource = self.resource_type(resource)
                     new_resources.append(resource)
         return sorted(new_resources)

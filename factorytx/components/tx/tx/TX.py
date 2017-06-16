@@ -64,7 +64,7 @@ class TXAbstract(object):
     def load_parameters(self, sdconfig, schema, conf):
         super(TXAbstract, self).load_parameters(sdconfig, schema, conf)
         self.tx_objs = []
-        print(self.options)
+        self.log.info(self.options)
         self.tx_ref = {}
         for tx_cfg in self.options['tx']:
             self.log.info("Loading the TX configuration %s", tx_cfg)
@@ -93,13 +93,13 @@ class TXAbstract(object):
         log.info("The dataframe has been saved")
         passed_all = True
         frame_info = self.tx_ref[frame_id]
-        print("The tx objects are", self.tx_objs)
+        self.log.info("The tx objects are %s", self.tx_objs)
         for tx in self.tx_objs:
             datasource_names = [x['name'] for x in tx.options['datasources']]
-            print("The options for my tx data are %s", tx.options['datasources'])
-            print("The datasource is %s", datasource)
+            self.log.debug("The options for my tx data are %s", tx.options['datasources'])
+            self.log.debug("The datasource is %s", datasource)
             if datasource in datasource_names:
-                log.info("The datasource name is %s and this tx handles it.", datasource)
+                log.debug("The datasource name is %s and this tx handles it.", datasource)
                 confirmation = tx.TX(dataframe, size)
                 if confirmation:
                     log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)

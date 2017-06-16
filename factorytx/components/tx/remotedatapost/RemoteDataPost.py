@@ -33,7 +33,7 @@ class RemoteDataPost(BaseTX):
         self.request_setup = self.setup_request()
 
     def TX(self, data, size):
-        self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
+        self.log.debug("RDP TX will now do its thing with vars %s.", vars(self))
         self.log.info("Processing data of length %s", len(data))
         loaded = self.format_sslogs(data)
         self.log.info("Now we have formatted the sslogs for rdp transmission.")

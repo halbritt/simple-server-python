@@ -15,10 +15,9 @@ class RDP1(FilePolling):
     logname = 'RDP1 Stream'
 
     def load_parameters(self, schema, conf):
+        conf['logname'] = ': '.join([self.logname, conf['name']])
         super(RDP1, self).load_parameters(schema, conf)
         print("The configuration for this RDP1 transport is %s", conf)
-        logname = ': '.join([self.logname, conf['name']])
-        super(RDP1, self).setup_log(logname)
 
     def prepare_resource(self, resource):
         return resource

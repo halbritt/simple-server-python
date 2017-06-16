@@ -72,6 +72,8 @@ class TransformAbstract(object):
             self.log.info("Loading the transform configuration %s", transform_cfg)
             transform_obj = self._load_plugin(transform_manager, transform_cfg)
             self.log.info("The transform datasources are %s", transform_obj.datasources)
+            if not 'log_level' in tx_cfg['config']:
+                tx_cfg['config']['log_level'] = self.options['log_level']
             for source in transform_obj.datasources:
                 if source['name'] in self.transform_ref:
                     self.transform_ref[source['name']][transform_cfg['name']] = transform_obj
