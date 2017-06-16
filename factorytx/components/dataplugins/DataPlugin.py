@@ -7,6 +7,7 @@ import sys
 import logging
 import pickle
 import threading
+import ujson as json
 from abc import abstractmethod, ABCMeta
 from time import sleep
 from time import time as tme
@@ -19,13 +20,6 @@ from itertools import chain
 from factorytx.components.dataplugins.resources.processedresource import ProcessedResource
 GLOBAL_MANAGER = global_manager()
 
-
-LOG = logging.getLogger("Data Plugin")
-try:
-    import ujson as json
-except Exception as import_error:
-    LOG.warning("There was an error importing the ujson module: %s", import_error)
-    import json
 
 class DataPluginAbstract(object):
     """
@@ -55,6 +49,7 @@ class DataPluginAbstract(object):
         super(DataPluginAbstract, self).__init__()
         self._connected = False
         self._running = True
+        self.options = {}
         self.client = None
         self.resource_dict = {}
         self.tx_dict = {}

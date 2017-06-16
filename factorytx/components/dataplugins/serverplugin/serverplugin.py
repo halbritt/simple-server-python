@@ -33,6 +33,7 @@ class ServerPlugin(PollingPlugin):
         self.log.info("My server options are %s", self.options)
         opt = self.options
         self.server.start(opt['host'], opt['port'], opt['apikeys'])
+        self._connected = True
 
     def perform_teardown(self):
         self.server.stop()
