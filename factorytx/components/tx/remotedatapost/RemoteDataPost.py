@@ -120,8 +120,12 @@ class RemoteDataPost(BaseTX):
                 sys.stdout.write("E")
         return result
 
+    @staticmethod
+    def sslog_sort_key(sslog):
+        return (sslog['data']['source'], sslog['data']['timestamp'])
+
     def format_sslogs(self, bson_content):
-        sslogs = sorted(bson_content, key=lambda x: x['data']['timestamp'])
+        sslogs = sorted(bson_content, key=self.sslog_sort_key)
         bson_arr = []
         for sslog in sslogs:
             bson_sslog = bson.BSON.encode(sslog)
