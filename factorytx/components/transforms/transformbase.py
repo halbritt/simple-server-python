@@ -20,9 +20,6 @@ class TransformBase(object):
         self.actions = []
         self.stractions = []
         self.regex = []
-        self.__dict__.update(plgn_cfg)
-        merge_schema_defaults(schema, self.__dict__)
-        self.log = getLogger("Base Transform")
 
     def apply_preprocessing(self, frame: pd.DataFrame) -> pd.DataFrame:
         """ Apply my preprocessing function to my dataframe. """

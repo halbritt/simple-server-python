@@ -33,30 +33,31 @@ class RemoteDataPost(BaseTX):
         self.request_setup = self.setup_request()
 
     def TX(self, data, size):
-        self.log.info("RDP TX will now do its thing with vars %s.", vars(self))
-        if type(data) == dict:
-            data = [data]
-        for x in data:
-            self.log.info("Processing data of length %s", len(x))
-            loaded = self.format_sslogs(x)
-            self.log.info("Now we have formatted the sslogs for rdp transmission.")
-            payload = self.make_payload(loaded)
-            self.log.debug("Made the payload")
-            txed = False
-            while not txed:
-                self.log.info("Submitting a payload")
-                tx_init = datetime.utcnow().isoformat()
-                ship = self.send_http_request(payload)
-                tx_finish = datetime.utcnow().isoformat()
-                self.log.info("The transmission start is %s and finish is %s", tx_init, tx_finish)
-                if ship['code'] < 200 or ship['code'] >= 300:
-                    self.log.info("Failed to tx the data of size %s because of a status code %s from the server.",
-                                  size, ship['code'])
-                    self.log.info('Will retry shipping the payload again.')
-                    time.sleep(5)
-                else:
-                    self.log.info("Finished the TX: %s", ship)
-                    txed = True
+        self.log.debug("RDP TX will now do its thing with vars %s.", vars(self))
+        self.log.info("Processing data of length %s", len(data))
+        loaded = self.format_sslogs(data)
+        self.log.info("Now we have formatted the sslogs for rdp transmission.")
+        payload = self.make_payload(loaded)
+        self.log.debug("Made the payload")
+        txed = False
+        while not txed:
+            self.log.info("Submitting a payload")
+            tx_init = datetime.utcnow()
+            ship = self.send_http_request(payload)
+            tx_finish = datetime.utcnow()
+            duration_seconds = (tx_finish - tx_init).total_seconds()
+            size_kb = len(payload) / 1024.0
+            self.log.info("Transmission took %.3f seconds for %d sslogs / %.1f KB (starting at %s.) "
+                          "Throughput: %.1f KB / s", duration_seconds, len(data), size_kb,
+                          tx_init.isoformat(), size_kb / duration_seconds)
+            if ship['code'] < 200 or ship['code'] >= 300:
+                self.log.info("Failed to tx the data of size %s because of a status code %s from the server.",
+                              size, ship['code'])
+                self.log.info('Will retry shipping the payload again.')
+                time.sleep(5)
+            else:
+                self.log.info("Finished the TX: %s", ship)
+                txed = True
         return True
 
     def setup_request(self):
@@ -119,8 +120,12 @@ class RemoteDataPost(BaseTX):
                 sys.stdout.write("E")
         return result
 
+    @staticmethod
+    def sslog_sort_key(sslog):
+        return (sslog['data']['source'], sslog['data']['timestamp'])
+
     def format_sslogs(self, bson_content):
-        sslogs = [x[1] for x in sorted(bson_content.items(), key=lambda y: y[0])]
+        sslogs = sorted(bson_content, key=self.sslog_sort_key)
         bson_arr = []
         for sslog in sslogs:
             bson_sslog = bson.BSON.encode(sslog)

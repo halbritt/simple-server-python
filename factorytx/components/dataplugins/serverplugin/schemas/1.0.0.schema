@@ -17,3 +17,6 @@ properties:
   max_logs:
     type: integer
     default: 1500
+  data_store:
+    type: string
+    default: /var/spool/sightmachine/factorytx/completed/pollingstore

@@ -2,10 +2,13 @@ $schema: http://json-schema.org/schema
 $schema-version: 1.0.0
 $plugin-type: acquisition
 properties:
-  version:
-    type: string
   root_path:
     type: string
-    default: /var/spool/sightmachine/factorytx/completed/rdp1store
+  version:
+    type: string
+  data_store:
+    type: string
+    default: /var/spool/sightmachine/factorytx/completed
 required:
 - version
+- root_path

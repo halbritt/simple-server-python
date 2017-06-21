@@ -3,7 +3,7 @@ import logging
 import os.path
 
 from factorytx.utils import merge_schema_defaults
-from factorytx.components.dataplugins.resource import Resource
+from factorytx.components.dataplugins.resources.resource import Resource
 
 log = logging.getLogger("File Polling Base Classes")
 

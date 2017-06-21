@@ -4,8 +4,9 @@ from uuid import uuid4
 from factorytx.utils import merge_schema_defaults
 import logging
 import shelve
+from factorytx.Global import setup_log
 
-log = logging.getLogger("Polling Service")
+logname = "Polling-Service"
 
 class Resource(metaclass=ABCMeta):
     """Represents a file (or resource) on a remote system.
@@ -48,23 +49,20 @@ class PollingServiceBase(metaclass=ABCMeta):
     def __init__(self):
         super(PollingServiceBase, self).__init__()
 
-    def setup_log(self, logname):
-        log.debug("My params are %s.", vars(self))
-        if not getattr(self, 'plugin_type', []):
-            self.plugin_type = self.protocol
-        self.log = logging.getLogger(self.plugin_type + ': ' + logname)
-
     def load_parameters(self, schema, conf):
+        self.log = setup_log(logname + '::' + conf['logname'], conf['log_level'])
         if conf is None:
             conf = {}
-        self.__dict__.update(conf)
-        merge_schema_defaults(schema, self.__dict__)
-        log.info(self.resource_dict_location)
-        print("The name config is", conf, vars(self))
+        conf_dict = {}
+        conf_dict.update(conf)
+        merge_schema_defaults(schema, conf_dict)
         if not 'name' in conf:
+            self.log.error("This polling service doesn't have a Name", vars(self))
             conf['name'] = str(uuid4())[:8]
-        resource_path = os.path.join(self.resource_dict_location, conf['name'])
         print("Creating the resource dictionaries")
+        self.options = conf_dict
+        if not getattr(self, 'plugin_type', []):
+            self.plugin_type = self.options['protocol']
         self.resources = {}
         self.last_registered = None
 
@@ -72,12 +70,11 @@ class PollingServiceBase(metaclass=ABCMeta):
         """ A RESOURCE MUST BE A SERIALIZEABLE DICTIONARY WHICH ADEQUATELY DEFINES THE PARAMETERS
             FOR THE RESOURCE. """
         # TODO: URL type identifier for a resource, not just random string
-        uid = str(uuid4())
-        print("Registering %s, with name %s", resource, resource.name)
-        print("The resource dictionary is %s", self.resources)
+        self.log.debug("Registering %s", resource)
+        self.log.debug("The resource dictionary is %s", self.resources)
         resource_encoding = resource.encode('utf8')
         self.resources[resource_encoding] = resource_encoding
-        return resource, resource_encoding, self.name, resource.mtime
+        return resource, resource_encoding, self.options['name'], resource.mtime
 
     def get_resource(self, uid):
         """ Gets a resource by a uid.
@@ -127,13 +124,13 @@ class PollingServiceBase(metaclass=ABCMeta):
             Ordered from oldest to newest.
         """
         new_resources = self.get_available_resources()
-        self.log.info("The available resources are %s.", new_resources)
+        self.log.debug("The available resources are %s.", new_resources)
         partitioned_resources = self.partition_resources(new_resources)
-        self.log.info("Partitioned are %s", partitioned_resources)
+        self.log.debug("Partitioned are %s", partitioned_resources)
         filtered_resources = self.chunk_resources(partitioned_resources)
-        self.log.info("Returning some Filtered %s", filtered_resources)
+        self.log.debug("Returning some Filtered %s", filtered_resources)
         no_overlap = self.remove_registered_overlap(filtered_resources)
-        self.log.info("The cleaned entries are %s", no_overlap)
+        self.log.debug("The cleaned entries are %s", no_overlap)
         return no_overlap
 
     def chunk_resources(self, filtered_resources):
@@ -165,16 +162,16 @@ class PollingServiceBase(metaclass=ABCMeta):
             for processing.
         """
         unregistered = []
-        all_resources = [x for x in self.get_all_resources()]
+        all_resources = self.get_all_resources()
         self.log.info("The resources that are available number %s.", len(all_resources))
-        self.log.info("The resource registrations are %s", self.resources)
-        for resource in self.get_all_resources():
+        self.log.debug("The resource registrations are %s", self.resources)
+        for resource in all_resources:
             resource_name = resource.encode('utf-8')
             if not resource_name in self.resources:
                 unregistered.append(resource)
             else:
                 log.debug("The resource %s is registered with key %s", resource, self.resources[resource_name])
-        self.log.info("The resources that are available and unregistered are %s", unregistered)
+        self.log.debug("The resources that are available and unregistered number %s", len(unregistered))
         return unregistered
 
     def remove_registered_overlap(self, resources):

@@ -8,6 +8,7 @@ argh
 boto
 cffi
 click
+mypy
 cryptography
 enum34
 idna
