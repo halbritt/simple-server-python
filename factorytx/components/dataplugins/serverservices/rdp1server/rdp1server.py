@@ -27,7 +27,7 @@ class RDP1Server:
             metadata regarding the upload process
 
         """
-        self.log.info("Uploading an RDP1 payload.")
+        self.log.debug("Uploading an RDP1 payload.")
         key_name = cherrypy.request.headers["X-Sm-Api-Key"]
         if key_name not in self.apikeys:
             cherrypy.response.status = 400
@@ -37,7 +37,7 @@ class RDP1Server:
         orig_filename = None
         orig_content = None
         if ipcfile:
-            self.log.info("Uploading binary attachment")
+            self.log.debug("Uploading binary attachment")
             try:
                 ipchead = ipcfile.headers
                 files = ipcfile
@@ -65,10 +65,10 @@ class RDP1Server:
                     body = [sslog]
                 rawbody = sslog
             except Exception as e:
-                self.log.info("There doesn't look to be any file attachments here %s.", e)
+                self.log.error("There doesn't look to be any file attachments here %s.", e)
                 files = []
         else:
-            self.log.info("Loading a json upload")
+            self.log.debug("Loading a json upload")
             cl = cherrypy.request.headers['Content-Length']
             rawbody = cherrypy.request.body.read(int(cl))
             body = json.loads(rawbody)
@@ -80,7 +80,7 @@ class RDP1Server:
             if len(body) == 0:
                 raise Exception("There is no payload length to this body")
             with open(os.path.join(self.data_store, file_name + 'headers'), 'w') as f:
-                self.log.info("Persisting the headers")
+                self.log.debug("Persisting the headers")
                 headers = cherrypy.request.headers
                 headers['capture_time'] = capture_time
                 if orig_filename:
@@ -90,7 +90,7 @@ class RDP1Server:
                 headers = json.dumps(cherrypy.request.headers)
                 f.write(headers)
             with open(os.path.join(self.data_store, file_name), 'wb') as f:
-                self.log.info("Persisting the file %s", file_name)
+                self.log.debug("Persisting the file %s", file_name)
                 f.write(rawbody)
             response_dic = {"valid_count": valid_count, "last_reject_id": None, "reject_count": 0,
                             "last_valid_id": last_id, "timestamp": datetime.utcnow().isoformat(),

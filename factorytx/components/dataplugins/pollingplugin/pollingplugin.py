@@ -14,8 +14,6 @@ component_manger = component_manager()
 parser_manager = component_manger['parsers']
 pollingservice_manager = component_manger['pollingservices']
 
-log = logging.getLogger("Polling Plugin")
-
 class PollingPlugin(DataPlugin):
     __metaclass__ = abc.ABCMeta
 
@@ -49,34 +47,34 @@ class PollingPlugin(DataPlugin):
     def process_resources(self, resources):
         processed, cnt, errors = [], 0, 0
         for resource in resources:
-            print("Processing %s", resource)
+            self.log.info("Processing %s", resource)
             processed += [self.process(resource[0], resource[1])]
             cnt += 1
             #except:
             #    log.warn("Not able to process the resource %s, skipping", resource)
             #    errors += 1
-        log.info("Processed %s resources while encountering %s errors.", cnt, errors)
+        self.log.info("Processed %s resources while encountering %s errors.", cnt, errors)
         return processed
 
     def process(self, resource_id, resource):
-        log.debug("Processing the resource %s", resource)
+        self.log.debug("Processing the resource %s", resource)
         records = self.process_resource(resource)
-        log.debug("Found some records with %s columns", len(records))
-        log.debug("Trying to save the resource with the right id %s", resource_id)
+        self.log.debug("Found some records with %s columns", len(records))
+        self.log.debug("Trying to save the resource with the right id %s", resource_id)
         return ([resource_id], records)
 
     def process_resource(self, resource):
-        log.info("The resource to be processed is %s", resource)
+        self.log.info("The resource to be processed is %s", resource)
         for parser_obj in self.parser_objs:
             self.log.info("The parser %s has datasources %s", parser_obj, parserobj.datasources)
             self.log.info("The resource we are processing has vars", resource.keys())
             if not polling_service.name in parser_obj.datasources:
-                log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
+                self.log.info("The parser %s cant handle %s", parser_obj, polling_service.name)
                 continue
             resource = polling_service.prepare_resource(resource)
             resource = parser_obj.parse(resource)
             self.log.info("The new records are %s lines long.", len(resource))
             self.log.info("The headers are %s.", resource.iloc(0))
         frame = resource
-        log.debug("The processing entry yielded the sets %s of len", len(frame))
+        self.log.debug("The processing entry yielded the sets %s of len", len(frame))
         return frame

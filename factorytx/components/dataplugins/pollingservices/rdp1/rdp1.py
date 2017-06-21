@@ -12,12 +12,12 @@ from factorytx.components.dataplugins.serverservices.rdp1server import RDP1Serve
 
 class RDP1(FilePolling):
 
-    logname = 'RDP1 Stream'
+    logname = 'RDP1-Stream'
 
     def load_parameters(self, schema, conf):
-        conf['logname'] = ': '.join([self.logname, conf['name']])
+        conf['logname'] = '::'.join([self.logname, conf['name']])
         super(RDP1, self).load_parameters(schema, conf)
-        print("The configuration for this RDP1 transport is %s", conf)
+        self.log.info("The configuration for this RDP1 transport is %s", conf)
 
     def prepare_resource(self, resource):
         return resource
@@ -31,9 +31,9 @@ class RDP1(FilePolling):
     def remove_resource(self, resource_id):
         if resource_id in self.resources:
             remove_path = os.path.join(self.root_path, resource_id)
-            print("Removing the resource from persistence with id %s from %s", resource_id, remove_path)
+            self.log.debug("Removing the resource from persistence with id %s from %s", resource_id, remove_path)
             if os.path.exists(remove_path):
-                print("Found the resource and removing it from %s", self.root_path)
+                self.log.debug("Found the resource and removing it from %s", self.root_path)
                 os.remove(remove_path)
                 if os.path.exists(remove_path + 'headers'):
                     os.remove(remove_path + 'headers')
@@ -42,7 +42,7 @@ class RDP1(FilePolling):
                 self.delete_resource_trace(resource_id)
                 return True
             else:
-                print("Couldn't find the path to remove for resource %s", resource_id)
+                self.log.info("Couldn't find the path to remove for resource %s", resource_id)
         return False
 
     def start(self, host, port, apikeys):

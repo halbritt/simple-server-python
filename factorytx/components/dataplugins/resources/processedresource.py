@@ -9,3 +9,7 @@ class ProcessedResource(Resource, metaclass=ABCMeta):
     @abstractmethod
     def to_record_string(self):
         pass
+
+    @abstractmethod
+    def remove_trace(self):
+        pass

@@ -135,10 +135,9 @@ class DataPluginAbstract(object):
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
-        record_string = records.to_record_string()
-        print("The options for us are:", self.options)
-        self.log.info("Registering the records %s that we have persisted", records)
-        self.register_data_frame(records)
+        record_string = records.persist_resource()
+        self.log.debug("Registering the records %s that we have persisted", records)
+        self.register_data_frame(record_string)
         return records
 
     @property
@@ -187,9 +186,8 @@ class DataPluginAbstract(object):
 
     def register_resources(self, resources):
         for res in resources:
-            print("The res is %s", res)
             resource, obj = res
-            self.log.info("Registering %s", resource)
+            self.log.debug("Registering %s", resource)
             self.resource_dict[resource[0]] = obj.encode("utf-8")
             yield res
 
@@ -208,10 +206,6 @@ class DataPluginAbstract(object):
             self.log.error("There doesn't seem to be an indication where this frame is persisted",
                            frame_info)
             return None
-
-    def convert_records(self, frame):
-        print("Converting the frame %s", frame.keys())
-        return DataFrame(frame)
 
     def push_frame(self, frame):
         if self.validate_frame(frame):
@@ -233,7 +227,7 @@ class DataPluginAbstract(object):
         pass
 
     def register_data_frame(self, records):
-        self.log.info("Registering the dataframe with resource id %s", records.resource_ids)
+        self.log.debug("Registering the dataframe with resource id %s", records.resource_ids)
         self.tx_dict[records.name] = records
         self.log.info("Sucessfuly registered the resources %s", records)
 
@@ -252,7 +246,7 @@ class DataPluginAbstract(object):
             if key in self.tx_dict:
                 todo = self.tx_dict[key].resource_ids
                 completed = []
-                self.log.info("Found the callback info %s with key %s", self.tx_dict[key], key)
+                self.log.info("Found the callback info %s with key %s trying to remove %s resources", self.tx_dict[key], key, len(todo))
                 for resource_id in todo:
                     trans = self.remove_resource(resource_id)
                     if trans:
@@ -311,6 +305,7 @@ class DataPluginAbstract(object):
                 for proc in processed:
                     found_records = True
                     self.emit_records(proc)
+                    self.callback_frames()
                 if not found_records:
                     self.log.info("Found no records to process on this run")
             except Exception as e:

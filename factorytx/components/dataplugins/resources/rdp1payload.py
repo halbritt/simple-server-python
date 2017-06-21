@@ -31,7 +31,11 @@ class RDP1Payload(RawResource):
     def load_resource(self):
         attachment_dic = {}
         with open(os.path.join(self.path, self.payload['data']), 'rb') as f:
-            rawbody = json.loads(f.read())
+            try:
+                rawbody = json.loads(f.read())
+            except Exception as e:
+                print("This resource is corrupted")
+                return None
         with open(os.path.join(self.path, self.payload['headers']), 'rb') as f:
             headers = json.loads(f.read())
         capture_time = headers['Capture_Time']

@@ -6,7 +6,7 @@ import logging
 import shelve
 from factorytx.Global import setup_log
 
-logname = "Polling Service"
+logname = "Polling-Service"
 
 class Resource(metaclass=ABCMeta):
     """Represents a file (or resource) on a remote system.
@@ -50,7 +50,7 @@ class PollingServiceBase(metaclass=ABCMeta):
         super(PollingServiceBase, self).__init__()
 
     def load_parameters(self, schema, conf):
-        self.log = setup_log(logname + ': ' + conf['logname'], conf['log_level'])
+        self.log = setup_log(logname + '::' + conf['logname'], conf['log_level'])
         if conf is None:
             conf = {}
         conf_dict = {}

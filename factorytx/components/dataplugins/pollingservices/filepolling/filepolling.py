@@ -8,12 +8,12 @@ from factorytx.components.dataplugins.pollingservices.pollingservicebase import 
 from factorytx.components.dataplugins.resources.fileentry import FileEntry
 from factorytx.components.dataplugins.pollingservices.filepolling.fileprotocols import FILE_PROTOCOLS
 
-logname = 'FilePolling Service'
+logname = 'FilePolling-Service'
 
 class FilePolling(PollingServiceBase):
 
     def load_parameters(self, schema, conf):
-        conf['logname'] = ': '.join([logname, conf['logname']])
+        conf['logname'] = '::'.join([logname, conf['logname']])
         super(FilePolling, self).load_parameters(schema, conf)
         self.log.info("The configuration for this FilePolling service is %s", conf)
         resource_type = conf['protocol']
@@ -82,8 +82,11 @@ class FilePolling(PollingServiceBase):
                     for i, metafile in enumerate(metanames):
                         resource[self.resource_metafiles[i]] = metafile
                     self.log.debug("Creating a new resource with dict %s", resource)
-                    resource = self.resource_type(resource)
-                    new_resources.append(resource)
+                    try:
+                        resource = self.resource_type(resource)
+                        new_resources.append(resource)
+                    except Exception as e:
+                        self.log.error("Failed to load the resource %s", resource)
         return sorted(new_resources)
 
     def partition_resources(self, resources):
