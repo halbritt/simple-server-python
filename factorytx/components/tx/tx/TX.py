@@ -203,7 +203,7 @@ class TXAbstract(object):
                     else:
                         res.load_resource()
                         logs = res.resource_data
-                    self.log.debug("The first tx arg is %s", res.name, len(logs))
+                    self.log.debug("The first tx arg is %s with logs of length %s", res.name, len(logs))
                     running_size = 0
                     for sslog_data in logs:
                         if 'attachment_info' in sslog_data:

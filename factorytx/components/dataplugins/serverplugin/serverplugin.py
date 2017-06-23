@@ -49,8 +49,9 @@ class ServerPlugin(PollingPlugin):
         resource_class = self.server.return_aggregate_class()
         num_processed = 0
         for resource in resources:
-            self.log.debug("Processing the resource %s", resource[1])
-            rec_id, rec_data = resource[0], resource[1].load_resource()
+            self.log.debug("Processing the resource %s", resource)
+            self.log.debug("The resource vars are %s", vars(resource))
+            rec_id, rec_data = resource.name, resource.load_resource()
             if not rec_data:
                 self.log.error("Problem loading the resource %s, ignoring", resource)
                 continue
@@ -59,11 +60,12 @@ class ServerPlugin(PollingPlugin):
             attachment_info = rec_data[1]
             num_logs = len(sslogs)
             self.log.debug("The number of logs that we will process is %s", num_logs)
+            datasource = resource.polling_service_name
             if attachment_info['binary']:
                 if attachment_info['original_size'] > max_size or attachment_info['original_size'] > max_size - running_size:
                     self.log.debug("The resource %s goes over the running max or is itself bigger than the max size.", rec_id)
                     if log_ids:
-                        yield resource_class(log_ids, {'sslog_list': log_data}, self.options['data_store'])
+                        yield resource_class(log_ids, datasource, {'sslog_list': log_data}, self.options['data_store'])
                         num_processed += 1
                         log_ids = []
                         log_data = []
@@ -74,7 +76,7 @@ class ServerPlugin(PollingPlugin):
                         if attachment_info['original_size'] > max_size:
                             self.log.error("The attachment size %s is bigger than the max aggregate size %s, appending singleton!",
                                            attachment_info['original_size'], max_size)
-                            yield resource_class([rec_id], {'sslog_list': log_dict}, self.options['data_store'])
+                            yield resource_class([rec_id], datasource, {'sslog_list': log_dict}, self.options['data_store'])
                             num_processed += 1
                         else:
                             self.log.debug("The attachment size %s is bigger than the running size of %s", attachment_info['original_size'], running_size)
@@ -92,7 +94,7 @@ class ServerPlugin(PollingPlugin):
                         running_logs += 1
             elif num_logs + running_logs > max_logs:
                 self.log.warn("The number of sslogs will put the max size overlimit, recreating")
-                yield resource_class(log_ids, {'sslog_list': log_data}, self.options['data_store'])
+                yield resource_class(log_ids, datasource, {'sslog_list': log_data}, self.options['data_store'])
                 num_processed += 1
                 log_ids = [rec_id]
                 log_data = []
@@ -106,6 +108,6 @@ class ServerPlugin(PollingPlugin):
                 log_ids.append(rec_id)
         if log_ids:
             self.log.info("Appending the ids %s", log_ids)
-            yield resource_class(log_ids, {'sslog_list': log_data}, self.options['data_store'])
+            yield resource_class(log_ids, datasource, {'sslog_list': log_data}, self.options['data_store'])
             num_processed += 1
         self.log.info("Processed %s resources in this run.", num_processed)

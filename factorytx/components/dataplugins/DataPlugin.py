@@ -78,7 +78,7 @@ class DataPluginAbstract(object):
         for polling_obj in self.pollingservice_objs:
             new_entries = polling_obj.poll()
             for resource in new_entries:
-                if resource[0][0] in self.resource_dict:
+                if resource.basename in self.resource_dict:
                     self.log.warn("The polling service says the new entry %s with id %s is already registered!", resource[1], resource[0])
                     continue
                 self.log.debug("Processing the resource %s", resource)
@@ -135,10 +135,10 @@ class DataPluginAbstract(object):
         print("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
-        record_string = records.persist_resource()
+        record_obj = records.persist_resource()
         self.log.debug("Registering the records %s that we have persisted", records)
-        self.register_data_frame(record_string)
-        return records
+        self.register_data_frame(record_obj)
+        return record_obj
 
     @property
     def connected(self):
@@ -186,9 +186,8 @@ class DataPluginAbstract(object):
 
     def register_resources(self, resources):
         for res in resources:
-            resource, obj = res
-            self.log.debug("Registering %s", resource)
-            self.resource_dict[resource[0]] = obj.encode("utf-8")
+            self.log.debug("Registering %s", res)
+            self.resource_dict[res.basename] = res.basename
             yield res
 
     def cleanup_frame(self, frame_id):
@@ -247,13 +246,13 @@ class DataPluginAbstract(object):
                 todo = self.tx_dict[key].resource_ids
                 completed = []
                 self.log.info("Found the callback info %s with key %s trying to remove %s resources", self.tx_dict[key], key, len(todo))
+                self.log.debug("Trying to remove the resources in %s", todo)
                 for resource_id in todo:
                     trans = self.remove_resource(resource_id)
                     if trans:
                         completed += [resource_id]
                     else:
-                        self.log.warn("The resource %s doesn't seem to exist along its path. ID: %s",
-                                      self.tx_dict[key], resource_id)
+                        self.log.warn("The resource %s doesn't seem to exist along its path. ID: %s", resource_id)
                         del self.in_pipe[key]
                         del self.tx_dict[key]
                 if completed == todo:
@@ -306,6 +305,10 @@ class DataPluginAbstract(object):
                     found_records = True
                     self.emit_records(proc)
                     self.callback_frames()
+                    while len(self.tx_dict) > 10:
+                        self.log.warning("There are too many TXs to send, waiting...")
+                        sleep(1)
+                        self.callback_frames()
                 if not found_records:
                     self.log.info("Found no records to process on this run")
             except Exception as e:

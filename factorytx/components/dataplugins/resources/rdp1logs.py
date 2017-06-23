@@ -12,11 +12,11 @@ class RDP1Logs(ProcessedResource):
 
     transformable = False
 
-    def __init__(self, resource_ids, resource_data, resource_store, uuid=None, create_time=None):
+    def __init__(self, resource_ids, datasource, resource_data, resource_store, uuid=None, create_time=None):
         self.resource_store = resource_store
-        self.resource_ids = [x[0] for x in resource_ids]
-        self.datasource = resource_ids[0][1]
-        self.plugin_type = resource_ids[0][2]
+        print("The resource ids info is %s", resource_ids[0])
+        self.resource_ids = resource_ids
+        self.datasource = datasource
         if not uuid:
             self.uuid = str(uuid4())
         else:
@@ -44,7 +44,7 @@ class RDP1Logs(ProcessedResource):
         return self.create_time + '--' + self.uuid
 
     def persist_resource(self):
-        try:
+        #try:
             print("The resource store is going to be %s", self.resource_store)
             if not os.path.exists(self.resource_store):
                 print("Making the resource store", self.resource_store)
@@ -52,10 +52,10 @@ class RDP1Logs(ProcessedResource):
             persist_location = os.path.join(self.resource_store, self.name)
             with open(persist_location, 'wb') as f:
                 pickle.dump(self, f)
-            return RDP1Logs(self.resource_ids, {}, self.resource_store, self.uuid, self.create_time)
-        except Exception as e:
-            print("THERE WAS A PROBLEM PERSISTING")
-            print("The error was", e)
+            return RDP1Logs(self.resource_ids, self.datasource, {}, self.resource_store, self.uuid, self.create_time)
+        #except Exception as e:
+        #    print("THERE WAS A PROBLEM PERSISTING")
+        #    print("The error was", e)
 
     def remove_trace(self):
         persist_location = os.path.join(self.resource_store, self.name)

@@ -71,10 +71,11 @@ class PollingServiceBase(metaclass=ABCMeta):
             FOR THE RESOURCE. """
         # TODO: URL type identifier for a resource, not just random string
         self.log.debug("Registering %s", resource)
-        self.log.debug("The resource dictionary is %s", self.resources)
+        self.log.debug("The resource dictionary has length %s", len(self.resources))
         resource_encoding = resource.encode('utf8')
         self.resources[resource_encoding] = resource_encoding
-        return resource, resource_encoding, self.options['name'], resource.mtime
+        resource.polling_service_name = self.options['name']
+        return resource
 
     def get_resource(self, uid):
         """ Gets a resource by a uid.
@@ -114,9 +115,9 @@ class PollingServiceBase(metaclass=ABCMeta):
         resource_candidates = self.get_new_resources()
         new_resources = []
         for resource in resource_candidates:
-            registration = self.register_resource(resource)
-            self.last_registered = registration[0]
-            new_resources.append((registration[1:], resource))
+            registered = self.register_resource(resource)
+            self.last_registered = registered
+            new_resources.append(registered)
         return new_resources
 
     def get_new_resources(self):
