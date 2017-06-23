@@ -89,7 +89,7 @@ class TXAbstract(object):
         passed_all = True
         frame_info = {'confirmation': False}
         self.tx_ref[frame_id] = frame_info
-        self.log.info("The tx objects are %s", self.tx_objs)
+        self.log.debug("The tx objects are %s", self.tx_objs)
         for tx in self.tx_objs:
             datasource_names = [x['name'] for x in tx.options['datasources']]
             self.log.debug("The options for my tx data are %s", tx.options['datasources'])
@@ -98,9 +98,9 @@ class TXAbstract(object):
                 self.log.debug("The datasource name is %s and this tx handles it.", datasource)
                 confirmation = tx.TX(resource_data, size)
                 if confirmation:
-                    self.log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
+                    self.log.debug("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
                 else:
-                    self.log.info("Failed to TX the frame %s", frame_id)
+                    self.log.debug("Failed to TX the frame %s", frame_id)
                     passed_all = False
         if passed_all:
             self.log.info("Sucessfuly TXed the frame %s with all txes", frame_id)
@@ -110,7 +110,7 @@ class TXAbstract(object):
                 frame_info['tx_time'] = time.time()
                 self.tx_ref[frame_id] = frame_info
                 self.out_pipe[frame_id] = True
-                self.log.info("Removed residual data from tx for %s", frame_id)
+                self.log.debug("Removed residual data from tx for %s", frame_id)
             elif confirm == False:
                 self.log.error("Couldn't remove the path from the frame %s", frame_info)
             else:
@@ -220,7 +220,7 @@ class TXAbstract(object):
                         else:
                             self.log.debug("Sucessfully TXed the frame %s.", res.name)
                             tx_done = True
-                    self.log.info("Moving on to a new TX")
+                    self.log.debug("Moving on to a new TX")
             except Exception as e:
                 self.log.exception('Failed to read data from: %r', e)
                 self._connected = False

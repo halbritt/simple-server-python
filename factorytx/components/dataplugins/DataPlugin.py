@@ -74,7 +74,7 @@ class DataPluginAbstract(object):
     def read(self):
         resource_entries = []
         process_cnt = 0
-        self.log.info("Looking for files in the FileTransport object.")
+        self.log.debug("Looking for resources in this DataPlugin object.")
         for polling_obj in self.pollingservice_objs:
             new_entries = polling_obj.poll()
             for resource in new_entries:
@@ -132,7 +132,7 @@ class DataPluginAbstract(object):
 
         :param records: The result of parsing or loading uploaded data and formatting it correctly
         """
-        print("The records we are saving have length %s", len(records))
+        self.log.debug("The records we are saving have length %s", len(records))
         # record = self.encrypt(records) for at rest encryption
         raw_records = True
         record_obj = records.persist_resource()
@@ -181,7 +181,6 @@ class DataPluginAbstract(object):
 
     def emit_records(self, records):
         records = self.save_json(records)
-        self.log.info("Saved the JSON")
         self.push_frame(records)
 
     def register_resources(self, resources):
@@ -196,7 +195,7 @@ class DataPluginAbstract(object):
             frame_path = frame_info['frame_path']
             if os.path.exists(frame_path):
                 os.remove(frame_path)
-                self.log.info("Removed the frame from persistence %s", frame_id)
+                self.log.debug("Removed the frame from persistence %s", frame_id)
                 return True
             else:
                 self.log.warn("The path %s doesn't seem to exist to be removed", frame_path)
@@ -209,13 +208,13 @@ class DataPluginAbstract(object):
     def push_frame(self, frame):
         if self.validate_frame(frame):
             frame_data = self.tx_dict[frame.name]
-            self.log.info("Transmitting the dataframe %s", frame_data)
+            self.log.debug("Transmitting the resource %s", frame_data)
             frame_data.transmission_time = tme()
             self.tx_dict[frame.name] = frame
-            self.log.info("Marked the time for %s", frame)
+            self.log.debug("Marked the time for %s", frame)
             self.out_pipe.put(frame)
         else:
-            self.log.info("Failed to validate frame")
+            self.log.error("Failed to validate frame")
 
     def validate_frame(self, frame):
         # TODO: SOME ADEQUATE VALIDATION HERE
@@ -228,7 +227,7 @@ class DataPluginAbstract(object):
     def register_data_frame(self, records):
         self.log.debug("Registering the dataframe with resource id %s", records.resource_ids)
         self.tx_dict[records.name] = records
-        self.log.info("Sucessfuly registered the resources %s", records)
+        self.log.debug("Sucessfuly registered the resources %s", records)
 
     def over_time(self, name):
         if name in self.resource_dict:
@@ -245,7 +244,7 @@ class DataPluginAbstract(object):
             if key in self.tx_dict:
                 todo = self.tx_dict[key].resource_ids
                 completed = []
-                self.log.info("Found the callback info %s with key %s trying to remove %s resources", self.tx_dict[key], key, len(todo))
+                self.log.debug("Found the callback info %s with key %s trying to remove %s resources", self.tx_dict[key], key, len(todo))
                 self.log.debug("Trying to remove the resources in %s", todo)
                 for resource_id in todo:
                     trans = self.remove_resource(resource_id)
@@ -259,7 +258,7 @@ class DataPluginAbstract(object):
                     self.log.info("Sucessfully removed all callbacks associated with %s", key)
                     completed_resources += [key]
         for key in completed_resources:
-            self.log.info("Deleting the key %s from persistence", key)
+            self.log.debug("Deleting the key %s from persistence", key)
             del self.in_pipe[key]
             resource_data = self.tx_dict[key]
             for resource_id in resource_data.resource_ids:
@@ -291,15 +290,15 @@ class DataPluginAbstract(object):
             self.reconnect()
 
         while self._running:
-            self.log.info("%s: Looking for my data", self.logname)
+            self.log.debug("%s: Looking for my data", self.logname)
             try:
                 self.log.info("%s: Detecting New Records", self.options['host'])
                 resources = self.read()
-                self.log.info("Found possible records, registering...")
+                self.log.debug("Found possible records, registering...")
                 resources = self.register_resources(resources)
-                self.log.info("Registered the records, now processing")
+                self.log.debug("Registered the records, now processing")
                 processed = self.process_resources(resources)
-                self.log.info("Finished processing the new records")
+                self.log.debug("Finished processing the new records")
                 found_records = False
                 for proc in processed:
                     found_records = True

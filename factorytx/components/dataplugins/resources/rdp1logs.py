@@ -14,7 +14,6 @@ class RDP1Logs(ProcessedResource):
 
     def __init__(self, resource_ids, datasource, resource_data, resource_store, uuid=None, create_time=None):
         self.resource_store = resource_store
-        print("The resource ids info is %s", resource_ids[0])
         self.resource_ids = resource_ids
         self.datasource = datasource
         if not uuid:
@@ -45,9 +44,7 @@ class RDP1Logs(ProcessedResource):
 
     def persist_resource(self):
         #try:
-            print("The resource store is going to be %s", self.resource_store)
             if not os.path.exists(self.resource_store):
-                print("Making the resource store", self.resource_store)
                 os.makedirs(self.resource_store)
             persist_location = os.path.join(self.resource_store, self.name)
             with open(persist_location, 'wb') as f:

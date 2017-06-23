@@ -34,14 +34,14 @@ class RemoteDataPost(BaseTX):
 
     def TX(self, data, size):
         self.log.debug("RDP TX will now do its thing with vars %s.", vars(self))
-        self.log.info("Processing data of length %s", len(data))
+        self.log.debug("Processing data of length %s", len(data))
         loaded = self.format_sslogs(data)
-        self.log.info("Now we have formatted the sslogs for rdp transmission.")
+        self.log.debug("Now we have formatted the sslogs for rdp transmission.")
         payload = self.make_payload(loaded)
         self.log.debug("Made the payload")
         txed = False
         while not txed:
-            self.log.info("Submitting a payload")
+            self.log.debug("Submitting a payload")
             tx_init = datetime.utcnow()
             ship = self.send_http_request(payload)
             tx_finish = datetime.utcnow()
@@ -56,7 +56,7 @@ class RemoteDataPost(BaseTX):
                 self.log.info('Will retry shipping the payload again.')
                 time.sleep(5)
             else:
-                self.log.info("Finished the TX: %s", ship)
+                self.log.debug("Finished the TX: %s", ship)
                 txed = True
         return True
 
