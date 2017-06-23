@@ -12,7 +12,7 @@ class RDP1Server:
     def __init__(self, data_store: str) -> ():
         self.log = setup_log(self.logname, "INFO")
         if not os.path.exists(data_store):
-            self.log.info("The datastore is", data_store)
+            self.log.info("The datastore is %s", data_store)
             os.makedirs(data_store)
         self.data_store = data_store
 
