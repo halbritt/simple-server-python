@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 import fnmatch
 import os.path
 
-from FactoryTx.components.dataplugins.parsers.base import BaseParser
+from factorytx.components.dataplugins.parsers.base import BaseParser
 
 ParsedFile = namedtuple('ParsedFile', ['id', 'remote_path', 'completed_contents', 'new_contents'])
 

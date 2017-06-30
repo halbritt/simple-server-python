@@ -24,6 +24,7 @@ routes
 rfc5424syslog
 semantic-version
 simpleeval
+flask_wtf
 six
 watchdog
 SQLAlchemy

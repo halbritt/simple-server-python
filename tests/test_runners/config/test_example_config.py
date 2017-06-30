@@ -4,13 +4,16 @@ import unittest
 from jsonschema import validate, ValidationError
 import yaml
 
-from FactoryTx.managers.PluginManager import component_manager
+from factorytx.managers.PluginManager import component_manager
 
 plugins = component_manager()['dataplugins']
 
-class ExampleConfigTestCase(unittest.TestCase):
+class ExampleConfigTestCase:
 
-    def test_example_configs(self):
+    def test_example_configs(pipeline_environment):
+        print(pipeline_environment)
+        for plugin in pipeline_environment[2]['config']['pipeline']:
+            print("PLUGIN:", plugin)
         pm = plugins
         pm.load_schemas()
         self.assertTrue(len(pm.plugin_schemas) != 0)
