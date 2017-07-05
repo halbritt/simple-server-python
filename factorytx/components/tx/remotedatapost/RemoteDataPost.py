@@ -100,7 +100,10 @@ class RemoteDataPost(BaseTX):
         self.log.info("Got the response %s", resp)
         if status_code < 200 or status_code >= 300:
             self.log.info("Iteration) ERROR: Failed to retrieve response: code=%s" % status_code)
-            self.log.info("The response error is %s", resp.reason)
+            if status_code == -1:
+                self.log.info("The attempt to reach the remote server failed, it may not be running")
+            else:
+                self.log.info("The response error is %s", resp.reason)
             try:
                 result = {'code': status_code, 'text': resp.text}
             except AttributeError as e:
