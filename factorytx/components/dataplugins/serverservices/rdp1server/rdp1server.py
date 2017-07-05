@@ -32,6 +32,9 @@ class RDP1Server:
         if key_name not in self.apikeys:
             cherrypy.response.status = 400
             self.log.warning("The request doesn't have a proper API key configured")
+            cherrypy.response.body = {"valid_count": 0, "last_reject_id": None, "reject_count": 0,
+                    "last_valid_id": None, "timestamp": datetime.utcnow().isoformat(),
+                    "valid": False, "reject_errors": ['Incorrect API Key'], "id": None}
             return
         file_name = self.generate_name(cherrypy.request.headers)
         orig_filename = None
@@ -100,6 +103,11 @@ class RDP1Server:
         except Exception as e:
             self.log.error("The error is %s", e)
             cherrypy.response.status = 500
+            response_dic = {"valid_count": 0, "last_reject_id": None, "reject_count": 0,
+                    "last_valid_id": None, "timestamp": datetime.utcnow().isoformat(),
+                    "valid": False, "reject_errors": ['Persistence Failure'], "id": None}
+            cherrypy.response.body = response_dic
+
 
     def stop_server(self):
         cherrypy.engine.exit()
