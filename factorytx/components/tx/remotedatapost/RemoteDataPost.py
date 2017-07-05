@@ -102,6 +102,10 @@ class RemoteDataPost(BaseTX):
             self.log.info("Iteration) ERROR: Failed to retrieve response: code=%s" % status_code)
             if status_code == -1:
                 self.log.info("The attempt to reach the remote server failed, it may not be running")
+            elif status_code == 403:
+                self.log.info("Error accessing the running ma server, possibly a missing API key in MA")
+            elif status_code == 400:
+                self.log.info("This was a bad request, possibly because of a misconfigured API key.")
             else:
                 self.log.info("The response error is %s", resp.reason)
             try:
