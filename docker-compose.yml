@@ -33,3 +33,5 @@ services:
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - send-log-data-volume:/var/log/sightmachine/factorytx/
             - pip-cache:/root/.cache/pip/
+        ports:
+            - 8090:8090
