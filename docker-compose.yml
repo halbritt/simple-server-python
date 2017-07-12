@@ -9,6 +9,7 @@ volumes:
         external: true
 
 services:
+
     factorytx:
         container_name: factorytx
         hostname: factorytx
@@ -19,10 +20,11 @@ services:
             context: /opt/sightmachine/factorytx
             dockerfile: Dockerfile
         tty: true
-        depends_on:
-            - postgres
         volumes:
-            - ./FactoryTx/pipelines/conf.d/:/opt/sightmachine/FactoryTx/FactoryTx/pipelines/conf.d/
-            - ./databuffer/:/var/spool/sightmachine/FactoryTx/
-            - ./:/opt/sightmachine/FactoryTx/
-            - /var/log/sightmachine/factorytx/:/var/log/sightmachine/factorytx/
+            # - ./factorytx/pipelines/conf.d/int_send:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
+            - /var/data:/var/data
+            - ./:/opt/sightmachine/factorytx/
+            - data-accounting-volume:/var/status/factorytx
+            - data-buffer-volume:/var/spool/sightmachine/factorytx/
+            - send-log-data-volume:/var/log/sightmachine/factorytx/
+            - pip-cache:/root/.cache/pip/
