@@ -33,10 +33,10 @@ services:
             # - ./factorytx/pipelines/conf.d/int_send:/opt/sightmachine/factorytx/factorytx/pipelines/conf.d/
             - /var/data:/var/data
             - ./:/opt/sightmachine/factorytx/
-            - data-accounting-volume:/var/status/factorytx
             - data-buffer-volume:/var/spool/sightmachine/factorytx/
             - send-log-data-volume:/var/log/sightmachine/factorytx/
             - pip-cache:/root/.cache/pip/
+
 
     simpledata:
         container_name: simpledata

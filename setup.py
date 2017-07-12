@@ -17,6 +17,7 @@ with open('requirements.txt') as f:
     required = f.read().splitlines()
 
 root = os.path.join(os.path.dirname(__file__), "factorytx")
+folders_and_files = []
 for dirpath, _, filenames in os.walk(root):
     for filename in filenames:
         if filename.endswith(".schema") or filename.endswith(".conf"):
