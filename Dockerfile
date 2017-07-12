@@ -60,7 +60,7 @@ COPY ./ /opt/sightmachine/factorytx
 
 RUN cd /opt/sightmachine/factorytx && \
     pip3.6 install .
-    # python3.6 -m compileall .
+    #python3.6 -m compileall .
 
 # RUN chown -R sm:sm /opt/sightmachine
 

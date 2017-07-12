@@ -13,22 +13,20 @@ for entry in entrypoints:
     with open(entry) as fp:
         entry_points += fp.read()
 
-folders_and_files = []
-ff = []
-for entry in entry_names:
-    ff += glob.glob(os.path.join("factorytx/components", entry, "*/schemas/*.schema"))
-for f in ff:
-    if f[0:11] == "factorytx/components/":
-        folders_and_files.append(f[22:])
-    else:
-        folders_and_files.append(f)
-
-package_data = {
-    'factorytx': folders_and_files
-}
-
 with open('requirements.txt') as f:
     required = f.read().splitlines()
+
+root = os.path.join(os.path.dirname(__file__), "factorytx")
+for dirpath, _, filenames in os.walk(root):
+    for filename in filenames:
+        if filename.endswith(".schema") or filename.endswith(".conf"):
+            abspath = os.path.join(dirpath, filename)
+            relpath = os.path.relpath(abspath, root)
+            folders_and_files.append(relpath)
+
+
+print("Appending the files %s to be listed", folders_and_files)
+package_data = {'factorytx': folders_and_files}
 
 setup(
     name="factorytx",
@@ -43,8 +41,8 @@ setup(
     url='https://github.com/sightmachine/factorytx',
     license='',
     packages=find_packages(exclude=["tests.*", "tests"]),
-    zip_safe=False,
     package_data=package_data,
+    zip_safe=False,
     # data_files=[ ],
     entry_points=entry_points,
     install_requires=required,
