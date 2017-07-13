@@ -48,7 +48,7 @@ class RDP1Server:
                 lsslog = json.loads(sslog)
                 last_id = lsslog['_id']
                 orig_filename = lsslog['original_filename']
-                orig_content = metadata.headers['Content-Type']
+                orig_content = ipchead['Content-Type']
                 valid_count = 1
                 size = 0
                 attachment_path = os.path.join(self.data_store, file_name + 'binaryattachment')
@@ -59,7 +59,7 @@ class RDP1Server:
                             break
                         out.write(data)
                         size += len(data)
-                    self.log.info("Finished uploading the binary attachment of size %s", size)
+                    self.log.info("Finished uploading the binary attachment of size %s with content type %s", size, orig_content)
                 orig_size = os.path.getsize(attachment_path)
                 if not sslog:
                     body = [{}]
