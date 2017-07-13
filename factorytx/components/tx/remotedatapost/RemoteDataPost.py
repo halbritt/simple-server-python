@@ -90,7 +90,7 @@ class RemoteDataPost(BaseTX):
             filetuple = ('p.tmp', payload, 'application/octet-stream', {'Transfer-Encoding': 'gzip'})
         multipart_form_data = {'sslog': filetuple}
         try:
-            resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'])
+            resp = setup['session'].put(setup['url'], files=multipart_form_data, headers=setup['headers'], allow_redirects=False)
             status_code = resp.status_code
         except Exception as e:
             self.log.error("Failed to perform the put with the setup %s", setup)
@@ -118,9 +118,13 @@ class RemoteDataPost(BaseTX):
         else:
             try:
                 resp = json.loads(resp.text)
-                result = {'code': status_code, 'summary': resp, 'size': len(payload)}
-                sys.stdout.write(".")
-                self.log.info("Iteration) SUCCESS: %s" % (resp))
+                if 'success' in resp and resp['success'] is True:
+                    result = {'code': status_code, 'summary': resp, 'size': len(payload)}
+                    sys.stdout.write(".")
+                    self.log.info("Iteration) SUCCESS: %s" % (resp))
+                else:
+                    result = {'code': 400, 'summary': resp}
+                    self.log.info("There was an error which resulted in a redirect, check firewall settings to the upload path")
             except Exception as e:
                 self.log.info("Iteration) ERROR: Failed to parse initial batch response")
                 result = {'code': status_code, 'parse_failed': True}
