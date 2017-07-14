@@ -134,6 +134,10 @@ class Config(dict):
         watcher_type = 'remotedatapost'
 
         cfg_errors_count = 0
+        all_incoming_data = []
+        all_rdp_incoming = []
+        all_transforms = []
+        all_outgoing_data = []
         for cfg_file, cfg in self.plugin_confs.items():
             # TODO: Move all of this logic into the plugins and just call
             #       loadParameters() here instead of duplicating it all inline.
@@ -176,18 +180,21 @@ class Config(dict):
                         datasources = plgn_cfg.get('datasources')
                         # Try to validate datasources (polling services)
                         for datasource in datasources:
+                            if dataplugin == 'dataplugins':
+                                all_incoming_data.append(datasource)
+                                if plgn_type == 'rdpreceive':
+                                    all_rdp_incoming.append(datasource)
+                            elif dataplugin == 'transforms':
+                                all_transforms.append(datasource)
+                            elif dataplugin == 'tx':
+                                all_outgoing_data.append(datasource)
                             data_cfg = datasource.get('config')
                             if not data_cfg: data_cfg = {}
                             if 'type' in datasource:
                                 data_cfg.update({'name':datasource['name'], 'type':datasource['type'], 'plugin_type':plgn_type})
                             else:
                                 data_cfg.update({'name':datasource['name'], 'type':plgn_type, 'plugin_type':plgn_type})
-                            #remove = []
-                            #for dta in datasources:
-                            #    if dta['name'] != datasource['name']:
-                            #        remove.append(dta)
-                            #datasources = [x for x in datasources if x not in remove]
-                            #data_cfg['datasources'] = datasources
+                            datasource['config'] = data_cfg
                         parsers = plgn_cfg.get('parsers')
                         # Try to validate the parsers for this plugin
                         if parsers and isinstance(parsers, list):
@@ -208,9 +215,11 @@ class Config(dict):
                                     log.error(str(e))
                                     cfg_errors_count += 1
                                     continue
-                        elif not parsers:
-                           no_parsers = True
-                           continue
+                        elif not parsers and not next_cat[0] == 'dataplugins':
+                            no_parsers = True
+                            continue
+                        else:
+                            plgn_cfg['name'] = plugin['name']
 
                         try:
                             validate(plgn_cfg, plgn_schema)
@@ -227,30 +236,30 @@ class Config(dict):
                             for entry in category[manager]:
                                 log.info("Loading the %s with type %s.", entry['name'], entry['type'])
                             self.plugin_conf_list = [(next_cat[0], manager, category)] + self.plugin_conf_list
+        outgoing_set = set([x['name'] for x in all_outgoing_data])
+        incoming_set = set([x['name'] for x in all_incoming_data])
+        for x in all_incoming_data:
+            if x['name'] not in outgoing_set:
+                log.error("There was no outgoing tx specified for the datasource %s", x['name'])
+                cfg_errors_count += 1
+        for x in all_outgoing_data:
+            if x['name'] not in incoming_set:
+                log.error("There is no incoming dataplugin specified for the tx datasource %s.", x['name'])
+                cfg_errors_count += 1
 
-            for watcher_cfg in cfg.get('watchers', []):
-                wtchr_ver = watcher_cfg['version']
-                wtchr_schema = plugin_manager.get_plugin_schema(watcher_type,
-                                                                wtchr_ver)
+        transform_set = set([x['name'] for x in all_transforms])
+        for x in all_rdp_incoming:
+            if x['name'] in transform_set:
+                log.error("The functionality to transform RDP1 packets has not been enabled in FTX yet, remove %s from your transforms", x['name'])
+                cfg_errors_count += 1
 
-                if not wtchr_schema:
-                    log.error('Cant find schema for plugin "{}" '
-                              'with version {}'.format(watcher_type,
-                                                       wtchr_ver))
-                    cfg_errors_count += 1
-                    continue
-
-                try:
-                    validate(watcher_cfg, wtchr_schema)
-                except Exception as e:
-                    log.error('Error in config for watcher in file: '
-                              '{}'.format(cfg_file))
-                    log.error(str(e))
-                    cfg_errors_count += 1
-                    continue
-
-                self.plugin_conf_list.append((watcher_type, watcher_cfg))
-
+        found_transforms = False
+        for conf in self.plugin_conf_list:
+            if conf[0] == 'transforms':
+                found_transforms = True
+                break
+        if not found_transforms:
+            self.plugin_conf_list = [('transforms', 'transforms', {})] + self.plugin_conf_list
         if cfg_errors_count:
             log.error('Found {} error(s) in config files'
                       ''.format(cfg_errors_count))

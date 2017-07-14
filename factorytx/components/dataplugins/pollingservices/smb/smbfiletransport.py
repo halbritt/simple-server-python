@@ -60,8 +60,8 @@ class SMBFileTransport(BaseTransport):
         self.conn = None
         self._connected = False
 
-    def loadParameters(self, schema, conf):
-        super(SMBFileTransport, self).loadParameters(schema, conf)
+    def load_parameters(self, schema, conf):
+        super(SMBFileTransport, self).load_parameters(schema, conf)
 
     def connect(self):
         try:

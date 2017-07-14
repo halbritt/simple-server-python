@@ -4,6 +4,7 @@ import os
 import os.path
 import stat
 import unittest
+import pytest
 
 import mock
 from testfixtures import compare, Replacer, TempDirectory
@@ -11,88 +12,52 @@ from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 import yaml
 
-from FactoryTx.managers.PluginManager import component_manager
-from FactoryTx.components.dataplugins.parsers.testparser.TestParser import TestParser
-from FactoryTx.components.dataplugins.file import FileService
-import FactoryTx.components.dataplugins.transports.localfile  # Needed to patch LocalFileTransport
+from factorytx.managers.PluginManager import component_manager
+from factorytx.components.dataplugins.parsers.testparser.TestParser import TestParser
+from factorytx.components.dataplugins.file import FileService
+#import factorytx.components.dataplugins.pollingservices.localfile  # Needed to patch LocalFileTransport
 from tests.utils.UnitTestUtils import load_sslogs
 from nose.tools import nottest
 
 components = component_manager()
 testparser = TestParser()
 parser_manager = components['parsers']
-transport_manager = components['transports']
+polling_manager = components['pollingservices']
 
+class FileServiceTests:
 
-class FileServiceTests(unittest.TestCase):
-    config_template = """
-version: 1.0.0
-source: {self.source}
-completed_folder: {self.completed_dir.path}
-outputdirectory: {self.output_dir.path}
-transports:
-- type: localfile
-  config:
-    version: 1.0.0
-    root_path: {self.src_dir_1.path}
-- type: localfile
-  config:
-    version: 1.0.0
-    root_path: {self.src_dir_2.path}
-parsers:
-- type: testparser
-  config:
-    version: 1.0.0
-    filename_patterns: ['*.txt']
-    id: text
-    sslog_type: text
-- type: testparser
-  config:
-    version: 1.0.0
-    filename_patterns: ['*.ply', '*.xyz', '*.shape.txt']
-    id: shapes
-    sslog_type: shapes
-    sslogs_per_file: 0
-- type: testparser
-  config:
-    version: 1.0.0
-    filename_patterns: ['*.ini']
-    id: recipes
-    sslog_type: recipes
-    sslogs_per_file: 2
-"""
+#    @classmethod
+#    def setUpClass(cls):
+#        super(FileServiceTests, cls).setUpClass()
+#        cls.pm = components['dataplugins']
+#        cls.pm.load_schemas()
+#        cls.schema = cls.pm.get_plugin_schema('file', '1.0.0')
+#
+#        parser_manager.load_schemas()
+#        transport_manager.load_schemas()
+#
+#    def setUp(self):
+#        self.source = 'AA_BB_ExampleMachine_1'
+#
+#        self.src_dir_1 = TempDirectory()
+#        self.src_dir_2 = TempDirectory()
+#        self.output_dir = TempDirectory()
+#        self.completed_dir = TempDirectory()
+#
+#        config_yaml = self.config_template.format(self=self)
+#        self.plugin = FileService()
+#        self.plugin.loadParameters({}, self.schema, yaml.load(config_yaml))
+#
+#        testparser.clear_parsed_files()  # Clear the history of the dummy parsers.
+#
+#    def tearDown(self):
+#        self.src_dir_1.cleanup()
+#        self.src_dir_2.cleanup()
+#        self.output_dir.cleanup()
+#        self.completed_dir.cleanup()
 
-    @classmethod
-    def setUpClass(cls):
-        super(FileServiceTests, cls).setUpClass()
-        cls.pm = components['dataplugins']
-        cls.pm.load_schemas()
-        cls.schema = cls.pm.get_plugin_schema('file', '1.0.0')
-
-        parser_manager.load_schemas()
-        transport_manager.load_schemas()
-
-    def setUp(self):
-        self.source = 'AA_BB_ExampleMachine_1'
-
-        self.src_dir_1 = TempDirectory()
-        self.src_dir_2 = TempDirectory()
-        self.output_dir = TempDirectory()
-        self.completed_dir = TempDirectory()
-
-        config_yaml = self.config_template.format(self=self)
-        self.plugin = FileService()
-        self.plugin.loadParameters({}, self.schema, yaml.load(config_yaml))
-
-        testparser.clear_parsed_files()  # Clear the history of the dummy parsers.
-
-    def tearDown(self):
-        self.src_dir_1.cleanup()
-        self.src_dir_2.cleanup()
-        self.output_dir.cleanup()
-        self.completed_dir.cleanup()
-
-    def test_ready_files_empty(self):
+    def test_ready_files_empty(parametrized_envs):
+        print(parametrized_envs)
         self.plugin.run_once()
         compare(testparser.get_parsed_files(), [])
 
@@ -154,7 +119,7 @@ parsers:
 
         copy_mock = mock.Mock()
         with Replacer() as replacer:
-            replacer.replace('FactoryTx.transports.localfile.LocalFileTransport.copy_file',
+            replacer.replace('factorytx.transports.localfile.LocalFileTransport.copy_file',
                              copy_mock)
             self.plugin.run_once()
             self.plugin.run_once()
@@ -341,7 +306,7 @@ parsers:
         # mtime first, even if one or more transports are disconnected.
         self._write_mtime_ordered_files()
 
-        old_list_files = FactoryTx.transports.localfile.LocalFileTransport.list_files
+        old_list_files = factorytx.transports.localfile.LocalFileTransport.list_files
 
         with Replacer() as replacer:
             # Replace list_files with a function that succeeds for one
@@ -351,7 +316,7 @@ parsers:
                     raise Exception('Unexpected exception in copy_files!')
                 return old_list_files()
 
-            replacer.replace('FactoryTx.transports.localfile.LocalFileTransport.list_files',
+            replacer.replace('factorytx.transports.localfile.LocalFileTransport.list_files',
                              failing_list_files)
 
             with self.assertRaises(Exception):
@@ -370,7 +335,7 @@ parsers:
         # mtime first, even if exceptions occur in copy_file.
         self._write_mtime_ordered_files()
 
-        old_copy_file = FactoryTx.transports.localfile.LocalFileTransport.copy_file
+        old_copy_file = factorytx.transports.localfile.LocalFileTransport.copy_file
         call_count = [0]
 
         with Replacer() as replacer:
@@ -382,7 +347,7 @@ parsers:
                 call_count[0] += 1
                 return old_copy_file(file_entry, local_path)
 
-            replacer.replace('FactoryTx.transports.localfile.LocalFileTransport.copy_file',
+            replacer.replace('factorytx.transports.localfile.LocalFileTransport.copy_file',
                              failing_copy_file)
 
             self.plugin.run_once()
@@ -401,7 +366,7 @@ parsers:
         # the completed path will be set on the second call.
         self._write_mtime_ordered_files()
 
-        old_delete_file = FactoryTx.transports.localfile.LocalFileTransport.delete_file
+        old_delete_file = factorytx.transports.localfile.LocalFileTransport.delete_file
         call_count = [0]
 
         with Replacer() as replacer:
@@ -413,7 +378,7 @@ parsers:
                 call_count[0] += 1
                 return old_delete_file(file_entry)
 
-            replacer.replace('FactoryTx.transports.localfile.LocalFileTransport.delete_file',
+            replacer.replace('factorytx.transports.localfile.LocalFileTransport.delete_file',
                              failing_delete_file)
 
             self.plugin.run_once()

@@ -1,0 +1,14 @@
+$schema: http://json-schema.org/schema
+$schema-version: 1.0.0
+$plugin-type: acquisition
+properties:
+  root_path:
+    type: string
+  version:
+    type: string
+  data_store:
+    type: string
+    default: /var/spool/sightmachine/factorytx/completed
+required:
+- version
+- root_path

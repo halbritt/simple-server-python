@@ -4,8 +4,9 @@ from uuid import uuid4
 from factorytx.utils import merge_schema_defaults
 import logging
 import shelve
+from factorytx.Global import setup_log
 
-log = logging.getLogger("Polling Service")
+logname = "Polling-Service"
 
 class Resource(metaclass=ABCMeta):
     """Represents a file (or resource) on a remote system.
@@ -48,31 +49,33 @@ class PollingServiceBase(metaclass=ABCMeta):
     def __init__(self):
         super(PollingServiceBase, self).__init__()
 
-    def setup_log(self, logname):
-        log.debug("My params are %s.", vars(self))
-        self.log = logging.getLogger(self.plugin_type + ': ' + logname)
-
-    def loadParameters(self, schema, conf):
+    def load_parameters(self, schema, conf):
+        self.log = setup_log(logname + '::' + conf['logname'], conf['log_level'])
         if conf is None:
             conf = {}
-        self.__dict__.update(conf)
-        merge_schema_defaults(schema, self.__dict__)
-        log.info(self.resource_dict_location)
-        resource_path = os.path.join(self.resource_dict_location, conf['name'])
-        self.resources = shelve.open(resource_path + "resource-reference")
-        self.resource_keys = shelve.open(resource_path +'resource-keys')
-        self.datasource_keys = shelve.open(resource_path + "datasource-keys")
+        conf_dict = {}
+        conf_dict.update(conf)
+        merge_schema_defaults(schema, conf_dict)
+        if not 'name' in conf:
+            self.log.error("This polling service doesn't have a Name", vars(self))
+            conf['name'] = str(uuid4())[:8]
+        print("Creating the resource dictionaries")
+        self.options = conf_dict
+        if not getattr(self, 'plugin_type', []):
+            self.plugin_type = self.options['protocol']
+        self.resources = {}
         self.last_registered = None
 
     def register_resource(self, resource):
         """ A RESOURCE MUST BE A SERIALIZEABLE DICTIONARY WHICH ADEQUATELY DEFINES THE PARAMETERS
             FOR THE RESOURCE. """
         # TODO: URL type identifier for a resource, not just random string
-        uid = str(uuid4())
-        self.resources[uid] = resource.encode('utf8')
-        self.resource_keys[resource.name] = uid
-        self.datasource_keys[uid] = self.name
-        return resource, uid, self.name, resource.mtime
+        self.log.debug("Registering %s", resource)
+        self.log.debug("The resource dictionary has length %s", len(self.resources))
+        resource_encoding = resource.encode('utf8')
+        self.resources[resource_encoding] = resource_encoding
+        resource.polling_service_name = self.options['name']
+        return resource
 
     def get_resource(self, uid):
         """ Gets a resource by a uid.
@@ -86,6 +89,7 @@ class PollingServiceBase(metaclass=ABCMeta):
     def load_resource_data(self, uid):
         """ Loads a resource and returns a tuple of uid, resource_dict, resource_data.
             Hopefully resource_data will be an iterable/generator.
+
 
         """
         if uid in self.resources:
@@ -111,9 +115,9 @@ class PollingServiceBase(metaclass=ABCMeta):
         resource_candidates = self.get_new_resources()
         new_resources = []
         for resource in resource_candidates:
-            registration = self.register_resource(resource)
-            self.last_registered = registration[0]
-            new_resources.append((registration[1:], resource))
+            registered = self.register_resource(resource)
+            self.last_registered = registered
+            new_resources.append(registered)
         return new_resources
 
     def get_new_resources(self):
@@ -121,13 +125,13 @@ class PollingServiceBase(metaclass=ABCMeta):
             Ordered from oldest to newest.
         """
         new_resources = self.get_available_resources()
-        self.log.info("The available resources are %s.", new_resources)
+        self.log.debug("The available resources are %s.", new_resources)
         partitioned_resources = self.partition_resources(new_resources)
-        self.log.info("Partitioned are %s", partitioned_resources)
+        self.log.debug("Partitioned are %s", partitioned_resources)
         filtered_resources = self.chunk_resources(partitioned_resources)
-        self.log.info("Returning some Filtered %s", filtered_resources)
+        self.log.debug("Returning some Filtered %s", filtered_resources)
         no_overlap = self.remove_registered_overlap(filtered_resources)
-        self.log.info("The cleaned entries are %s", no_overlap)
+        self.log.debug("The cleaned entries are %s", no_overlap)
         return no_overlap
 
     def chunk_resources(self, filtered_resources):
@@ -135,7 +139,10 @@ class PollingServiceBase(metaclass=ABCMeta):
             resources.
 
         """
-        max_size = self.max_resource_size
+        if getattr(self, 'max_resource_size', []):
+            max_size = self.max_resource_size
+        else:
+            max_size = 0
         running_resources = []
         for resource in filtered_resources:
            chunks = self.chunk_resource(resource, max_size)
@@ -158,18 +165,38 @@ class PollingServiceBase(metaclass=ABCMeta):
         unregistered = []
         all_resources = self.get_all_resources()
         self.log.info("The resources that are available number %s.", len(all_resources))
-        for resource in self.get_all_resources():
-            if not resource in self.resource_keys:
+        self.log.debug("The resource registrations are %s", self.resources)
+        for resource in all_resources:
+            resource_name = resource.encode('utf-8')
+            if not resource_name in self.resources:
                 unregistered.append(resource)
             else:
-                log.debug("The resource %s is registered with key %s and item %s", resource, self.resource_keys[resource], self.resources[self.resource_keys[resource]])
-        self.log.info("The resources that are available and unregistered are %s", unregistered)
+                log.debug("The resource %s is registered with key %s", resource, self.resources[resource_name])
+        self.log.debug("The resources that are available and unregistered number %s", len(unregistered))
         return unregistered
 
     def remove_registered_overlap(self, resources):
         present = self.resources
         last = self.last_registered
         return self.resource_difference(resources, present, last)
+
+    def delete_resource_trace(self, resource_id):
+        if resource_id in self.resources:
+            del self.resources[resource_id]
+
+    @abstractmethod
+    def remove_resource(self, resource_id):
+        """ Remove the persistence of a resource after sucessful transmission. """
+        pass
+
+    @abstractmethod
+    def prepare_resource(self):
+        """ The purpose of this method is to do any moving of the location of the specified resource
+            in order to prepare it to be processed quickly and easily. e.g. SMB/FTP polling services
+            will need to copy remote resources to a local place or load it into some buffer at the
+            minimum.
+        """
+        pass
 
     @abstractmethod
     def return_resource_class(self):

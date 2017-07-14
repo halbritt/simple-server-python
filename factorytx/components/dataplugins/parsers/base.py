@@ -14,7 +14,7 @@ class BaseParser(object):
     def __init__(self):
         super(BaseParser, self).__init__()
 
-    def loadParameters(self, schema, conf):
+    def load_parameters(self, schema, conf):
         if conf is None:
             conf = {}
         self.__dict__.update(conf)

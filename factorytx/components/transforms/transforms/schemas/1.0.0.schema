@@ -7,7 +7,7 @@ properties:
   name:
     type: string
     default: "Generic Transform"
-  polltime:
+  poll_rate:
     description: Poll time in seconds
     type: number
     minimum: 1

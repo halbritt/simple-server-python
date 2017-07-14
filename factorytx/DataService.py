@@ -96,28 +96,28 @@ class DataService(object):
             self.pipe = pipes[0]
 
     def _load_plugin(self, manager, cfg):
-        cfg['config'].update({'source': self.name})
-        obj = manager.get_plugin(cfg['type'])()
-        schema = manager.get_plugin_schema(cfg['type'], cfg['config']['version'])
-        obj.loadParameters(schema, cfg['config'])
+        if 'config' in cfg:
+            cfg['config'].update({'source': self.name})
+            obj = manager.get_plugin(cfg['type'])()
+            schema = manager.get_plugin_schema(cfg['type'], cfg['config']['version'])
+            obj.load_parameters(schema, cfg['config'])
         return obj
 
-    def loadParameters(self, sdconfig, schema, conf):
+    def load_parameters(self, sdconfig, schema, conf):
         '''
         This function will load up parameters and append that particular config
         to the object as variables
         '''
-        self.__dict__.update(conf)
+        self.options = conf
         if not schema: schema = {}
         for key, value in schema.get('properties', {}).items():
             if value.get('default', None) != None:
-                if ((not hasattr(self, key))
-                        or (hasattr(self, key)
-                            and getattr(self, key) == None)):
-                    setattr(self, str(key), str(value.get('default')))
+                if ((key not in self.options)) or (key in self.options and self.options[key] == None):
+                    self.options[key] = value.get('default')
 
         plugin_name = str(self.__class__).split('.')[-2]  # Strip plugin name
         if hasattr(self, 'source'):
             plugin_name = "{}-{}".format(plugin_name, self.source)
         self.log = setup_log(plugin_name, conf['log_level'])
-        self.root_dir = sdconfig.get('plugins', {}).get('data')
+        if sdconfig:
+            self.root_dir = sdconfig.get('plugins', {}).get('data')

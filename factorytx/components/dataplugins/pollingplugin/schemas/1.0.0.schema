@@ -2,10 +2,6 @@ $schema: http://json-schema.org/schema
 $schema-version: 1.0.0
 $plugin-type: acquisition
 properties:
-  root_path:
+  data_store:
     type: string
-  version:
-    type: string
-required:
-- version
-- root_path
+    default: /var/spool/sightmachine/factorytx/completed/pollingstore

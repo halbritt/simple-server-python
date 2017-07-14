@@ -59,6 +59,3 @@ properties:
     description: File name filters to be applied for input files
     type: string
     default: '/*.sm.json'
-required:
-- version
-- host

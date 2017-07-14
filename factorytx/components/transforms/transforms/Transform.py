@@ -4,6 +4,7 @@ import os
 import sys
 import logging
 import pandas as pd
+import ujson as json
 from datetime import timedelta, datetime
 
 from bson import ObjectId
@@ -20,16 +21,6 @@ cfg = get_config()
 components = component_manager()
 transform_manager = components['transforms']
 global_manager = global_manager()
-try:
-    import ujson as json
-except:
-    import json
-
-log = logging.getLogger(__name__)
-
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
-
 
 class TransformAbstract(object):
     """
@@ -53,6 +44,7 @@ class TransformAbstract(object):
         self._running = True
         self.client = None
         self.loaded_transforms = {}
+        self.transforms = []
 
     def __del__(self):
         try:
@@ -63,14 +55,16 @@ class TransformAbstract(object):
     def __repr__(self):
         return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(TransformAbstract, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(TransformAbstract, self).load_parameters(sdconfig, schema, conf)
         self.transform_objs = []
         self.transform_ref = {}
         for transform_cfg in self.transforms:
             self.log.info("Loading the transform configuration %s", transform_cfg)
             transform_obj = self._load_plugin(transform_manager, transform_cfg)
             self.log.info("The transform datasources are %s", transform_obj.datasources)
+            if not 'log_level' in tx_cfg['config']:
+                tx_cfg['config']['log_level'] = self.options['log_level']
             for source in transform_obj.datasources:
                 if source['name'] in self.transform_ref:
                     self.transform_ref[source['name']][transform_cfg['name']] = transform_obj
@@ -92,16 +86,16 @@ class TransformAbstract(object):
             and subsequently returns the given dataframe with the transform applied.
 
         """
-        log.info("In the transform function with frame of len %s", len(dataframe))
+        self.log.info("In the transform function with frame of len %s", len(dataframe))
         transforms = self.get_transforms(datasource_name)
         for trans in transforms:
-            log.info('Applying the transformation', trans)
+            self.log.info('Applying the transformation', trans)
             dataframe = self.apply_transform(dataframe, trans, datasource_name)
         return dataframe
 
     def get_transforms(self, datasource_name: str) -> list:
         """ Gets the transforms in order that I need to apply to a given DATASOURCE_NAME """
-        log.info("getting %s with transform %s", datasource_name, self.transforms)
+        self.log.info("getting %s with transform %s", datasource_name, self.transforms)
         transform_queue = []
         for transform in self.transforms:
             for datasource in transform['config']['datasources']:
@@ -114,7 +108,7 @@ class TransformAbstract(object):
             transform type to find and apply the right transform object to the dataframe.
 
         """
-        log.info("Applying the transform %s to data %s of len %d", trans, datasource_name, len(dataframe))
+        self.log.info("Applying the transform %s to data %s of len %d", trans, datasource_name, len(dataframe))
         name = trans['type']
         print("The ref is %s", self.transform_ref)
         transform = self.transform_ref[datasource_name][trans['name']]
@@ -125,7 +119,7 @@ class TransformAbstract(object):
         """ Pushes out the transformation dictionary. """
         cfg = {}
         self.out_pipe.put(dataframe_dict)
-        log.info("Pushed transformation down the pipe")
+        self.log.info("Pushed transformation down the pipe")
 
     # TODO: Better transform connections
     @property
@@ -143,39 +137,16 @@ class TransformAbstract(object):
     def reconnect(self):
         # If we got here, we probably aren't connected
         self._connected = False
-
-        log.warning('Connection lost to {}. Trying to reconnect'
-                    ''.format(self.host))
-
-        count = 0
-        keep_trying = True
-        while keep_trying:
-            time.sleep(self.reconnect_timeout)
-            log.warning('Reconnection Attempt: {}'.format(count))
-
-            try:
-                self.connect()
-            except Exception as e:
-                log.warning("Connection Error: {}".format(e))
-
-            if self.connected:
-                return
-
-            count += 1
-            # Attempt to reconnect forever unless defined in config to override
-            if (self.reconnect_attempts != -1
-                    and self.reconnect_attempts < float('inf')):
-                if count >= self.reconnect_attempts:
-                    keep_trying = False
-
-        raise Exception('Failed to reconnect after {} attempts'
-                        ''.format(self.reconnect_attempts))
+        try:
+            self.connect()
+        except Exception as e:
+            self.log.error("The reconnection failed with error %s", e)
 
     def run(self) -> ():
         """ Finds dataframes and manipulates them according to my rules. """
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
-        log = setup_log(self.logname, self.log_level)
+        log = setup_log(self.logname, self.options['log_level'])
         sys.modules[self.__class__.__module__].log = log
         self.log = log
 
@@ -183,39 +154,43 @@ class TransformAbstract(object):
             global_manager.dict = self.__dict__[
                 '_Win32ServiceManager__global_dict']
 
-        log.info("Running %s plugin...", self.name)
+        self.log.info("Running %s plugin...", self.name)
 
         try:
             self.connect()
         except Exception as e:
-            log.error('Failed to connect to {}'.format(self.host))
-            log.exception(e)
+            self.log.error('Failed to connect to {}'.format(self.host))
+            self.log.exception(e)
             self.reconnect()
 
         while self._running:
             try:
-                log.info("Looking for transforms to find")
                 if not self.is_empty():
-                    log.info("Getting Next Transform")
                     next_transform = self.get_next_transform()
-                    log.info("Transforming the data with id %s and resource %s", next_transform['frame_id'], next_transform['datasource'])
-                    log.info("The frame keys are %s", next_transform['frame'].keys())
-                    next_transform['frame'] = self.transform(next_transform['frame'], next_transform['datasource'])
-                    log.info("Pushing the Transform")
-                    self.push_transform(next_transform)
-                    log.info("done")
+                    self.log.info("Getting Next Transform %s", next_transform)
+                    if not next_transform.transformable:
+                        self.push_transform(next_transform)
+                    else:
+                        self.log.debug("Transforming the data with id %s and resource %s", next_transform['frame_id'], next_transform['datasource'])
+                        next_transform['frame'] = self.transform(next_transform['frame'], next_transform['datasource'])
+                        self.log.debug("Pushing the Transform")
+                        self.push_transform(next_transform)
+                        self.log.debug("done")
             except Exception as e:
-                log.exception('Failed to read data from: %r', e)
+                self.log.exception('Failed to read data from: %r', e)
                 self._connected = False
                 self.reconnect()
                 continue
 
             # sleep by 0.1
-            print("My polltime is %s", self.polltime)
-            for _ in range(int(float(self.polltime) / 0.1)):
-                time.sleep(0.1)
-                if not self._running:
+            if self.is_empty():
+                self.log.debug("My poll rate is %s", self.options['poll_rate'])
+                if not self.is_empty():
                     break
+                for _ in range(int(float(self.options['poll_rate']) / 0.1)):
+                    time.sleep(0.1)
+                    if not self._running:
+                        break
 
 
 class Transform(TransformAbstract, multiprocessing.Process, DataService):

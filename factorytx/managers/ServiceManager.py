@@ -83,9 +83,9 @@ class ServiceManager(object):
             plgn_schema = manager.get_plugin_schema(category, plgn_ver)
             plugin_cls = manager.get_plugin(category)
         plgn_cfg['log_level'] = log_level
-
+        print("The plugin is", plugin_cls)
         plgn = plugin_cls()
-        plgn.loadParameters(CONFIG, plgn_schema, plgn_cfg)
+        plgn.load_parameters(CONFIG, plgn_schema, plgn_cfg)
         return plgn
 
     @staticmethod

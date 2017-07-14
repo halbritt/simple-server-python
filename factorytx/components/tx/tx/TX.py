@@ -1,10 +1,12 @@
 import multiprocessing
+import pickle
 import time
 import os
 import sys
 import shelve
 import logging
 import pandas as pd
+import ujson as json
 from datetime import timedelta
 
 from bson import ObjectId
@@ -21,15 +23,6 @@ components = component_manager()
 tx_manager = components['tx']
 
 global_manager = global_manager()
-try:
-    import ujson as json
-except:
-    import json
-
-log = logging.getLogger(__name__)
-
-if global_manager.get_encryption():
-    from cryptography.fernet import Fernet
 
 class TXAbstract(object):
     """
@@ -63,24 +56,18 @@ class TXAbstract(object):
     def __repr__(self):
         return "<Plugin {} {}>".format(self.__class__.__name__, self.name)
 
-    def loadParameters(self, sdconfig, schema, conf):
-        super(TXAbstract, self).loadParameters(sdconfig, schema, conf)
+    def load_parameters(self, sdconfig, schema, conf):
+        super(TXAbstract, self).load_parameters(sdconfig, schema, conf)
         self.tx_objs = []
-        if not os.path.exists(self.tx_persistence_location):
-            os.mkdir(self.tx_persistence_location)
-        self.tx_ref = shelve.open(os.path.join(self.tx_dict_location, self.tx_dict_name))
-        for tx_cfg in self.tx:
-            self.log.debug("Loading the TX configuration %s", tx_cfg)
+        self.log.info(self.options)
+        self.tx_ref = {}
+        for tx_cfg in self.options['tx']:
+            self.log.info("Loading the TX configuration %s", tx_cfg)
+            if not 'log_level' in tx_cfg['config']:
+                tx_cfg['config']['log_level'] = self.options['log_level']
             tx_obj = self._load_plugin(tx_manager, tx_cfg)
+            self.log.debug("The tx options are", tx_obj.options)
             self.tx_objs.append(tx_obj)
-
-    def populate_out(self) -> ():
-        """ Given my records of tx transmission, populates the out_pipe dictionary with the posted
-            txes.
-
-        """
-        for frame_id, status in self.tx_ref.items():
-            self.out_pipe[frame_id] = status
 
     def is_empty(self) -> ():
         """ Returns True exactly when my in_pipe is empty, and false otherwise. """
@@ -91,111 +78,65 @@ class TXAbstract(object):
         get = self.in_pipe.get()
         return get
 
-    def tx_frame(self, datasource: str, frame_id: str, dataframe: pd.DataFrame) -> ():
+    def tx_frame(self, resource, size=0) -> bool:
         """ Given a DATASOURCE as a key with a FRAME_ID and a DATAFRAME to tx, proceeds to
             transmit the dataframe along the correct tx obj based on the datasource.
 
         """
-        log.info("Pushing frame to final location")
-        self.persist_frame(frame_id, dataframe)
-        log.info("The dataframe has been saved")
+        datasource = resource.datasource
+        frame_id = resource.name
+        resource_data = resource.resource_data
         passed_all = True
-        frame_info = self.tx_ref[frame_id]
+        frame_info = {'confirmation': False}
+        self.tx_ref[frame_id] = frame_info
+        self.log.debug("The tx objects are %s", self.tx_objs)
         for tx in self.tx_objs:
-            if datasource in tx.data_reference:
-                data = tx.data_reference[datasource]
-                log.info("The datasource name is %s and this tx handles %s", datasource, data['name'])
-                confirmation = tx.TX(dataframe)
+            datasource_names = [x['name'] for x in tx.options['datasources']]
+            self.log.debug("The options for my tx data are %s", tx.options['datasources'])
+            self.log.debug("The datasource is %s", datasource)
+            if datasource in datasource_names:
+                self.log.debug("The datasource name is %s and this tx handles it.", datasource)
+                confirmation = tx.TX(resource_data, size)
                 if confirmation:
-                    log.info("Sucessfuly TXed the frame %s with tx %s", frame_id, tx.__name__)
+                    self.log.debug("Sucessfuly TXed the frame %s with tx %s", frame_id, tx)
                 else:
-                    log.info("Failed to TX the frame %s", frame_id)
+                    self.log.debug("Failed to TX the frame %s", frame_id)
                     passed_all = False
         if passed_all:
-            log.info("Sucessfuly TXed the frame %s with tx %s", frame_id)
-            confirm = self.remove_frame(frame_info['frame_path'])
+            self.log.info("Sucessfuly TXed the frame %s with all txes", frame_id)
+            confirm = self.remove_frame(resource)
             if confirm:
                 frame_info['confirmation'] = True
                 frame_info['tx_time'] = time.time()
                 self.tx_ref[frame_id] = frame_info
                 self.out_pipe[frame_id] = True
-                log.info("Removed residual data from tx for %s", frame_id)
+                self.log.debug("Removed residual data from tx for %s", frame_id)
             elif confirm == False:
-                log.error("Couldn't remove the path from the frame %s", frame_info)
+                self.log.error("Couldn't remove the path from the frame %s", frame_info)
             else:
-                log.warn("The frame %s doesn't seem to be persisted in TX", frame_id)
+                self.log.warn("The frame %s doesn't seem to be persisted in TX", frame_id)
+            return True
+        return False
 
-    def remove_frame(self, frame_path: str) -> utils.status_var:
+    def cleanup_resources(self):
+        del_frames = []
+        for frame_id in self.tx_ref:
+            if not frame_id in self.out_pipe:
+                del_frames.append(frame_id)
+        for frame in del_frames:
+            del self.tx_ref[frame]
+
+    def remove_frame(self, resource: str) -> utils.status_var:
         """ Given the FRAME_PATH to a saved dataframe, returns True exactly when the
             frame was removed from the fs, False exactly when there was trouble removing
             the frame, and None exactly when the path doesn't exist on the fs.
 
         """
-        if os.path.exists(frame_path):
-            try:
-                os.remove(frame_path)
-                log.info("Removed the temp frame %s", frame_path)
-                return True
-            except Exception as e:
-                log.error("Trouble removing the path %s with error %s", frame_path, e)
-                return False
+        trace = resource.remove_trace()
+        if trace:
+            return True
         else:
-            return None
-
-    def persist_frame(self, frame_id: str, dataframe: pd.DataFrame) -> ():
-        """ Save a DATAFRAME with a particular FRAME_ID so that if there is
-            a connectivity issue with a TX module we can persist till later.
-
-        """
-        log.info("Persisting the frame %s", frame_id)
-        path = os.path.join(self.tx_persistence_location, str(frame_id))
-        with open(path, 'w') as f:
-            log.info("Writing to the path %s", path)
-            jsn = json.dumps(dataframe)
-            f.write(jsn)
-        self.tx_ref[frame_id] = {'confirmation':False, 'frame_path':path}
-        self.out_pipe[frame_id] = False
-        log.info("Persisted the frame and registered it with my references")
-        log.info("The out is %s", vars(self.out_pipe))
-
-
-    def encrypt(self, dataframe: pd.DataFrame):
-        """ Given a DATAFRAME, encrypt it into the right format. """
-        gm = global_manager
-        if not gm.get_encryption():
-            return records
-
-        (encryption_public_key,
-         encryption_padding,
-         sha1_digest) = gm.get_encryption()
-
-        symmetric_key = Fernet.generate_key()
-        encrypter = Fernet(symmetric_key)
-        encrypted_key = encryption_public_key.encrypt(
-                        symmetric_key,
-                        encryption_padding)
-
-        exclude_keys = ["source", "timestamp", "counter", "poll_rate"]
-        for ts, data in records.items():
-            enc_data = {}
-            enc_fields = []
-
-            for k, v in data.items():
-                if k in exclude_keys:
-                    enc_data[k] = v
-                else:
-                    enc_data[k] = encrypter.encrypt(json.dumps(v))
-                    enc_fields.append(k)
-
-            enc_data['encryption'] = dict(
-                key=base64.b64encode(encrypted_key),
-                fields=enc_fields,
-                pubkey_sha1=sha1_digest,
-                encoding="field-encrypt-v1"
-            )
-
-            records[ts] = enc_data
-        return records
+            return False
 
     @property
     def connected(self):
@@ -214,33 +155,19 @@ class TXAbstract(object):
         # TODO we need to flesh out this method for TX specifically
         # If we got here, we probably aren't connected
         self._connected = False
+        try: self.connect()
+        except Exception as e:
+            self.log.error("There was a problem with %s", e)
 
-        log.warning('Connection lost to {}. Trying to reconnect'
-                    ''.format(self.host))
-
-        count = 0
-        keep_trying = True
-        while keep_trying:
-            time.sleep(self.reconnect_timeout)
-            log.warning('Reconnection Attempt: {}'.format(count))
-
-            try:
-                self.connect()
-            except Exception as e:
-                log.warning("Connection Error: {}".format(e))
-
-            if self.connected:
-                return
-
-            count += 1
-            # Attempt to reconnect forever unless defined in config to override
-            if (self.reconnect_attempts != -1
-                    and self.reconnect_attempts < float('inf')):
-                if count >= self.reconnect_attempts:
-                    keep_trying = False
-
-        raise Exception('Failed to reconnect after {} attempts'
-                        ''.format(self.reconnect_attempts))
+    def load_binary(self, attachment):
+        formatted = {}
+        with open(attachment['binary'], 'rb') as f:
+            binary_attach = f.read()
+        formatted['content'] = binary_attach
+        formatted['content_type'] = attachment['original_content']
+        formatted['content_encoding'] = 'raw'
+        formatted['filename'] = attachment['original_file']
+        return formatted
 
     def run(self) -> ():
         """ Proceeds in the loop of pulling off txes and transmitting them.
@@ -248,46 +175,67 @@ class TXAbstract(object):
         """
         # reinitialize the log after forking, this is necessary on Windows
         # and probably not a terrible idea in UNIX
-        log = setup_log(self.logname, self.log_level)
+        log = setup_log(self.logname, self.options['log_level'])
         sys.modules[self.__class__.__module__].log = log
         self.log = log
 
         if os.name == 'nt':
-            log.info(self.__dict__.keys())
+            self.log.info(self.__dict__.keys())
             global_manager.dict = self.__dict__[
                 '_Win32ServiceManager__global_dict']
 
-        log.info("Running {} plugin...".format(self.name))
+        self.log.info("Running {} plugin...".format(self.name))
 
         try:
             self.connect()
-            self.populate_out()
         except Exception as e:
-            log.error('Failed to connect to %s', self.host)
-            log.exception(e)
+            self.log.error('Failed to connect to %s', self.options['host'])
+            self.log.exception(e)
             self.reconnect()
 
         while self._running:
             try:
-                log.info("Looking for TX to find")
                 if not self.is_empty():
-                    log.info("Getting Next TX")
+                    self.log.debug("Getting Next TX")
                     res = self.get_next_tx()
-                    log.info("The first tx arg is %s", res['frame_id'])
-                    log.info("TXing the data")
-                    self.tx_frame(res['datasource'], res['frame_id'], res['frame'])
-                    log.info("done")
+                    if res.loaded:
+                        logs = res.resource_data
+                    else:
+                        res.load_resource()
+                        logs = res.resource_data
+                    self.log.debug("The first tx arg is %s with logs of length %s", res.name, len(logs))
+                    running_size = 0
+                    for sslog_data in logs:
+                        if 'attachment_info' in sslog_data:
+                            self.log.info("Loading and attching a binary attachment for %s", sslog_data['attachment_info'])
+                            sslog_data['attachment'] = self.load_binary(sslog_data['attachment_info'])
+                            running_size += sslog_data['attachment_info']['original_size']
+                            del sslog_data['attachment_info']
+                    tx_done = False
+                    while not tx_done:
+                        self.log.debug("Transmitting tx with running size %s", running_size)
+                        tx_status = self.tx_frame(res, running_size)
+                        if not tx_status:
+                            self.log.error("The TX %s was unable to send to all of its RDP receivers", res.name)
+                        else:
+                            self.log.debug("Sucessfully TXed the frame %s.", res.name)
+                            tx_done = True
+                    self.log.debug("Moving on to a new TX")
             except Exception as e:
-                log.exception('Failed to read data from: %r', e)
+                self.log.exception('Failed to read data from: %r', e)
                 self._connected = False
                 self.reconnect()
                 continue
+            self.cleanup_resources()
 
             # sleep by 0.1
-            for _ in range(int(float(self.polltime) / 0.1)):
-                time.sleep(0.1)
-                if not self._running:
-                    break
+            if self.is_empty():
+                for _ in range(int(float(self.options['poll_rate']) / 0.1)):
+                    time.sleep(0.1)
+                    if not self.is_empty():
+                        break
+                    if not self._running:
+                        break
 
 
 class TX(TXAbstract, multiprocessing.Process, DataService):

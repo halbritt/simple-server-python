@@ -4,6 +4,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.swp
 
 # Distribution / packaging
 .Python
@@ -66,3 +67,6 @@ conf.d/*
 
 #macos files
 ._*
+
+# Config Files
+factorytx/pipelines/conf.d

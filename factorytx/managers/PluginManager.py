@@ -56,6 +56,7 @@ class PluginManager(object):
         plg_dirs = dict()
         for plg_path in plugin_paths:
             plg_path = plg_path[0]
+            if not os.path.exists(plg_path): continue
             for directory in os.listdir(plg_path):
                 if os.path.isdir(os.path.join(plg_path, directory)):
                     plg_dirs[directory] = os.path.join(plg_path, directory)
@@ -120,7 +121,10 @@ class PluginManager(object):
         :param str name: The name of the plugin desired.
         :returns: The loaded plugin
         """
+        print("The plugin name is", name)
+        print("My plugins are %s", self.plugins)
         plugin = self.plugins.get(name)
+        print("The plugin is", plugin)
         if plugin:
             return plugin.load()
 
@@ -129,7 +133,7 @@ DATA_DIRECTORIES = [ 'factorytx.components.dataplugins,factorytx.reservecomponen
                     'factorytx.components.filters,factorytx.reservecomponents.filters',
                     'factorytx.components.tx,factorytx.reservecomponents.tx']
 SUBDATA_DIRECTORIES = ['factorytx.components.dataplugins.parsers,factorytx.reservecomponents.dataplugins.parsers',
-                       'factorytx.components.dataplugins.transports,factorytx.reservecomponents.dataplugins.transports']
+                       'factorytx.components.dataplugins.pollingservices,factorytx.reservecomponents.dataplugins.pollingservices']
 
 COMPONENT_MANAGER = { p.split(',')[0][21:]: PluginManager(p, [getattr(factorytx, 'R_' + p.split(',')[0][21:].upper() + '_DIRS'), getattr(factorytx, p.split(',')[0][21:].upper() + '_DIRS')]) for p in DATA_DIRECTORIES }
 for entry in SUBDATA_DIRECTORIES:

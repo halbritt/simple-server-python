@@ -1,34 +1,25 @@
 $schema: http://json-schema.org/schema
 $schema-version: 1.0.0
-$component-type: transform
+$component-type: tx
 properties:
   version:
     type: string
   name:
     type: string
     default: "Generic Transform"
-  polltime:
+  poll_rate:
     description: Poll time in seconds
     type: number
     minimum: 1
-    default: 5
+    default: 1
   actions:
     type: array
     items:
       type: object
-  tx_dict_location:
-    description: Where to write things
-    type: string
-    default: /var/status/factorytx
-  tx_dict_name:
-    description: The key of persistence
-    type: string
-    default: tx_dict
   tx_persistence_location:
     description: Where to store things
     type: string
     default: /var/status/factorytx/temp
-
 required:
 - version
 - actions
