@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # base-image for node on any machine using a template variable,
 # see more about dockerfile templates here: http://docs.resin.io/deployment/docker-templates/
 # and about resin base images here: http://docs.resin.io/runtime/resin-base-images/
