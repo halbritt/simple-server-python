@@ -1,1 +1,0 @@
-from .ftpfiletransport import FTPFileTransport
